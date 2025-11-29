@@ -1,3 +1,5 @@
+include <BOSL2/std.scad>
+
 // All units are mm
 
 /* [Components] */
@@ -11,6 +13,10 @@ LCD_screw_tab_depth = 5.08;
 LCD_display_height = 1.5;
 // Height of the entire LCD board, including the display
 LCD_height = 4.97;
+// Viewable width of the LCD
+LCD_viewable_width = 43;
+// Viewable depth of the LCD
+LCD_viewable_depth = 22;
 // Depth of the Feather
 Feather_depth = 22.86;
 // Height of the Feather
@@ -51,8 +57,16 @@ Button_diameter = 11.4;
 Button_z_offset = 1;
 
 /* [Case and standoff geometry] */
+// Size of most surfaces
+Surface = 1.5;
 // Edge of the LCD to edge of the Feather and button board, no tolerance
 Case_x_spacing = 16.1;
+// Extra space to add to X/Y case inner space
+Case_clearance = 1.5;
+// Radius for case curvature
+Case_radius = 10;
+// Extra space around the button
+Button_clearance = 1;
 
 /* [Tolerances] */
 // Feather extra Z offset from the LCD
@@ -65,6 +79,9 @@ Battery_z_offset = -1;
 Button_x_offset = 1.5;
 
 module __Customizer_Limit__ () {}
+
+$fs = 0.1;
+$fa = 1;
 
 function inner_height() = LCD_height + Feather_z_offset + Feather_height + Battery_z_offset + Battery_height;
 
@@ -121,9 +138,71 @@ module button() {
 	import("lib/4431 STEMMA Buttons.stl");
 }
 
-color("#ffdd88") lcd();
-color("#88ddff") feather();
-color("#aaffaa") speaker();
-color("#9999ff") battery();
-color("#ffdddd") audio_amp();
-color("#ff5555") button();
+function inner_width() = LCD_board_width + Case_x_spacing * 2 + Case_clearance;
+function inner_depth() = LCD_board_depth + Case_clearance;
+
+module case() {
+	outer_width = inner_width() + Surface * 2;
+	outer_depth = inner_depth() + Surface * 2;
+	outer_height = inner_height() + Surface;
+
+	render()
+	difference() {
+		translate([0, 0, -outer_height / 2])
+		cuboid(
+			[outer_width, outer_depth, outer_height],
+			rounding = Case_radius,
+			edges = ["Z"]
+		);
+	
+		translate([0, 0, -inner_height() / 2])
+		cuboid(
+			[inner_width(), inner_depth(), inner_height()],
+			rounding = Case_radius,
+			edges = ["Z"]
+		);
+	}
+}
+
+module lid() {
+	outer_width = inner_width() + Surface * 2;
+	outer_depth = inner_depth() + Surface * 2;
+	
+	render()
+	difference() {
+		translate([0, 0, -Surface / 2 + Surface])
+		cuboid(
+			[outer_width, outer_depth, Surface],
+			rounding = Case_radius,
+			edges = ["Z"]
+		);
+		
+		translate([
+			LCD_board_width / 2 + Button_diameter / 2 + Button_x_offset,
+			0,
+			0
+		])
+		
+		cylinder(
+			d2 = Button_diameter + Button_clearance + Surface * 2,
+			d1 = Button_diameter + Button_clearance,
+			h = Surface
+		);
+		
+		prismoid(
+			size1 = [LCD_viewable_width, LCD_viewable_depth],
+			size2 = [LCD_viewable_width + Surface * 2, LCD_viewable_depth + Surface * 2],
+			h = Surface
+		);
+	}
+}
+
+//color("#ffdd88") lcd();
+//color("#88ddff") feather();
+//color("#aaffaa") speaker();
+//color("#9999ff") battery();
+//color("#ffdddd") audio_amp();
+//color("#ff5555") button();
+
+case();
+lid();
