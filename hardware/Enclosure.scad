@@ -17,6 +17,8 @@ LCD_height = 4.97;
 LCD_viewable_width = 43;
 // Viewable depth of the LCD
 LCD_viewable_depth = 22;
+// Width of the Feather
+Feather_width = 2 * 25.4;
 // Depth of the Feather
 Feather_depth = 22.86;
 // Height of the Feather
@@ -61,6 +63,12 @@ Feather_reset_x_offset = 10.8;
 Feather_reset_y_offset = 6.3;
 // Feather USB C Z delta
 Feather_USB_C_z_delta = 3.2;
+// Height of the Feather's PCB only
+Feather_PCB_height = 1.6;
+// X offset from the Feather board's corner of the retaining pin
+Feather_retaining_pin_x_delta = 1.8;
+// Y offset from the Feather board's corner of the retaining pin
+Feather_retaining_pin_y_delta = 1.8;
 
 /* [Case and standoff geometry] */
 // Size of most surfaces
@@ -162,7 +170,23 @@ module standoffs() {
 			cylinder(d = 2.35, h = Audio_amp_z_offset);
 		}
 	}
+	
+	// Feather retaining pin
+	translate([
+		-inner_width() / 2 + Feather_width - 3 / 2 - Feather_retaining_pin_x_delta,
+		Feather_depth / 2 - 3 / 2 - Feather_retaining_pin_y_delta,
+		-inner_height()
+	])
+	cube([3, 3, inner_height() - LCD_height - Feather_z_offset - Feather_PCB_height]);
+	
+	translate([
+		-inner_width() / 2 + Feather_width - Feather_retaining_pin_x_delta,
+		Feather_depth / 2 - Feather_retaining_pin_y_delta,
+		-LCD_height - Feather_z_offset - Feather_PCB_height
+	])
+	cylinder(d = 1.8, h = Feather_PCB_height + 1);
 }
+
 
 module usb_c_hole(depth) {
 	hole_width = 10.5;
@@ -284,5 +308,5 @@ color("#88ddff") feather();
 //color("#ff5555") button();
 
 
-case();
+%case();
 //lid();
