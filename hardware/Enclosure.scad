@@ -55,6 +55,10 @@ Button_z_projection = 4.3;
 Button_diameter = 11.4;
 // Z offset of the button board
 Button_z_offset = 1;
+// Feather reset button's X offset (origin is the center edge by the USB C port)
+Feather_reset_x_offset = 10.8;
+// Feather reset button's Y offset (origin is the center edge by the USB C port)
+Feather_reset_y_offset = 6.3;
 
 /* [Case and standoff geometry] */
 // Size of most surfaces
@@ -67,6 +71,8 @@ Case_clearance = 1.5;
 Case_radius = 10;
 // Extra space around the button
 Button_clearance = 1;
+// Reset hole diameter (enough for a paperclip)
+Reset_hole_diameter = 1.75;
 
 /* [Tolerances] */
 // Feather extra Z offset from the LCD
@@ -145,22 +151,41 @@ module case() {
 	outer_width = inner_width() + Surface * 2;
 	outer_depth = inner_depth() + Surface * 2;
 	outer_height = inner_height() + Surface;
+	
+	reset_guide_height = inner_height() - LCD_height - Feather_z_offset - Feather_height;
+	reset_guide_origin = [
+		-LCD_board_width / 2 - Case_x_spacing + Feather_reset_x_offset,
+		Feather_reset_y_offset,
+		-inner_height()
+	];
 
 	render()
 	difference() {
-		translate([0, 0, -outer_height / 2])
-		cuboid(
-			[outer_width, outer_depth, outer_height],
-			rounding = Case_radius,
-			edges = ["Z"]
-		);
-	
-		translate([0, 0, -inner_height() / 2])
-		cuboid(
-			[inner_width(), inner_depth(), inner_height()],
-			rounding = Case_radius,
-			edges = ["Z"]
-		);
+		union() {
+			difference() {
+				translate([0, 0, -outer_height / 2])
+				cuboid(
+					[outer_width, outer_depth, outer_height],
+					rounding = Case_radius,
+					edges = ["Z"]
+				);
+			
+				translate([0, 0, -inner_height() / 2])
+				cuboid(
+					[inner_width(), inner_depth(), inner_height()],
+					rounding = Case_radius,
+					edges = ["Z"]
+				);
+				
+			}
+			
+			translate(reset_guide_origin)
+			cylinder(d = Reset_hole_diameter + Surface * 2, h = reset_guide_height);
+		}
+		
+		translate([0, 0, -Surface])
+		translate(reset_guide_origin)
+		cylinder(d = Reset_hole_diameter, h = reset_guide_height + Surface);
 	}
 }
 
@@ -204,5 +229,6 @@ module lid() {
 //color("#ffdddd") audio_amp();
 //color("#ff5555") button();
 
+
 case();
-lid();
+//lid();
