@@ -59,6 +59,8 @@ Button_z_offset = 1;
 Feather_reset_x_offset = 10.8;
 // Feather reset button's Y offset (origin is the center edge by the USB C port)
 Feather_reset_y_offset = 6.3;
+// Feather USB C Z delta
+Feather_USB_C_z_delta = 3.2;
 
 /* [Case and standoff geometry] */
 // Size of most surfaces
@@ -80,7 +82,7 @@ Feather_z_offset = 1;
 // Battery X inset from the inner edge
 Battery_x_offset = 15;
 // Battery extra Z offset from the Feather (may be negative as parts of the Feather are shorter)
-Battery_z_offset = -1;
+Battery_z_offset = 0;
 // Button X offset from the edge of the LCD board
 Button_x_offset = 1.5;
 
@@ -146,6 +148,36 @@ module button() {
 	import("lib/4431 STEMMA Buttons.stl");
 }
 
+module standoffs() {
+	// audio amp
+	inset = 2.5;
+	for (x = [inset, Audio_amp_width - inset]) {
+		translate([
+			-Speaker_depth / 2 + Speaker_x_offset - Audio_amp_width + x,
+			-Audio_amp_depth + LCD_board_depth / 2 + Audio_amp_depth - inset,
+			-inner_height()
+		])
+		difference() {
+			cylinder(d = 4, h = Audio_amp_z_offset);
+			cylinder(d = 2.35, h = Audio_amp_z_offset);
+		}
+	}
+}
+
+module usb_c_hole(depth) {
+	hole_width = 10.5;
+	hole_radius = 2;
+
+	for (y = [-hole_width / 2 + hole_radius, hole_width / 2 - hole_radius]) {
+		translate([0, y, 0])
+		rotate([90, 0, 90])
+		cylinder(r = hole_radius, h = depth);
+	}
+	
+	translate([depth / 2, 0, 0])
+	cube([depth, hole_width - hole_radius * 2, hole_radius * 2], center = true);
+}
+
 module case() {
 	outer_width = inner_width() + Surface * 2;
 	outer_depth = inner_depth() + Surface * 2;
@@ -180,7 +212,16 @@ module case() {
 				
 			translate(reset_guide_origin)
 			cylinder(d = Reset_hole_diameter + 2, h = reset_guide_height);
+			
+			standoffs();
 		}
+
+		translate([
+			-inner_width() / 2 - Surface,
+			0, 
+			-LCD_height - Feather_z_offset - Feather_USB_C_z_delta
+		])
+		usb_c_hole(Surface);
 
 		translate([Speaker_x_offset, inner_depth() / 2, -Speaker_width / 2])
 		rotate([0, 90, 90])
@@ -236,7 +277,7 @@ module lid() {
 }
 
 //color("#ffdd88") lcd();
-//color("#88ddff") feather();
+color("#88ddff") feather();
 //color("#aaffaa") speaker();
 //color("#9999ff") battery();
 //color("#ffdddd") audio_amp();
