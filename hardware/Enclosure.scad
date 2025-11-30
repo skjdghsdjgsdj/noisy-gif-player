@@ -90,6 +90,8 @@ $fs = 0.1;
 $fa = 1;
 
 function inner_height() = LCD_height + Feather_z_offset + Feather_height + Battery_z_offset + Battery_height;
+function inner_width() = LCD_board_width + Case_x_spacing * 2 + Case_clearance;
+function inner_depth() = LCD_board_depth + Case_clearance;
 
 module lcd() {
 	translate([-LCD_board_width / 2, LCD_board_depth / 2 - LCD_screw_tab_depth, -LCD_display_height])
@@ -144,9 +146,6 @@ module button() {
 	import("lib/4431 STEMMA Buttons.stl");
 }
 
-function inner_width() = LCD_board_width + Case_x_spacing * 2 + Case_clearance;
-function inner_depth() = LCD_board_depth + Case_clearance;
-
 module case() {
 	outer_width = inner_width() + Surface * 2;
 	outer_depth = inner_depth() + Surface * 2;
@@ -178,11 +177,25 @@ module case() {
 				);
 				
 			}
-			
+				
 			translate(reset_guide_origin)
-			cylinder(d = Reset_hole_diameter + Surface * 2, h = reset_guide_height);
+			cylinder(d = Reset_hole_diameter + 2, h = reset_guide_height);
 		}
-		
+
+		translate([Speaker_x_offset, inner_depth() / 2, -Speaker_width / 2])
+		rotate([0, 90, 90])
+		union() {
+			cylinder(d = 1.5, h = Surface);
+			for (i = [0 : 5]) {
+				angle = (i / 6) * 360;
+				x = sin(angle) * 3;
+				y = cos(angle) * 3;
+				
+				translate([x, y, 0])
+				cylinder(d = 1.5, h = Surface);
+			}
+		}
+
 		translate([0, 0, -Surface])
 		translate(reset_guide_origin)
 		cylinder(d = Reset_hole_diameter, h = reset_guide_height + Surface);
