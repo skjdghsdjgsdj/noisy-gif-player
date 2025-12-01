@@ -35,10 +35,12 @@ Speaker_height = 5;
 Battery_width = 36;
 // Battery_depth
 Battery_depth = 17;
-// Speaker X offset
-Speaker_x_offset = 9;
 // Battery_height
 Battery_height = 7.8;
+// Battery X inset from the inner edge
+Battery_x_offset = 15;
+// Speaker X offset
+Speaker_x_offset = 9;
 // I2S audio amplifier width
 Audio_amp_width = 17.78;
 // I2S audio amplifier depth
@@ -97,8 +99,6 @@ Reset_hole_diameter = 1.75;
 /* [Tolerances] */
 // Feather extra Z offset from the LCD
 Feather_z_offset = 1;
-// Battery X inset from the inner edge
-Battery_x_offset = 15;
 // Battery extra Z offset from the Feather (may be negative as parts of the Feather are shorter)
 Battery_z_offset = 0;
 // Button X offset from the edge of the LCD board
@@ -399,7 +399,7 @@ module lid() {
 //color("#ffdd88") lcd();
 //color("#88ddff") feather();
 //color("#aaffaa") speaker();
-//color("#9999ff") battery();
+color("#9999ff") battery();
 //color("#ffdddd") audio_amp();
 //color("#ff5555") button();
 
