@@ -9,6 +9,8 @@ LCD_board_width = 57.15;
 LCD_board_depth = 36.83;
 // Depth that the screw tabs protrude from the board's main body
 LCD_screw_tab_depth = 5.08;
+// X/Y inset of the screw holes for the LCD
+LCD_screw_inset = 2.55;
 // Height of the top of the LCD to the board's top
 LCD_display_height = 1.5;
 // Height of the entire LCD board, including the display
@@ -194,6 +196,38 @@ module standoffs() {
 	])
 	cylinder(d = 1.8, h = Feather_PCB_height + 1);
 	
+	// Floating LCD standoffs
+	lcd_screw_hole_size = 2.5;
+	floating_height = 2;
+	height = LCD_height - LCD_display_height;
+	for (x = [-LCD_board_width / 2 + LCD_screw_inset, LCD_board_width / 2 - LCD_screw_inset]) {
+		for (y = [-LCD_board_depth / 2 + LCD_screw_inset, LCD_board_depth / 2 - LCD_screw_inset]) {
+			y_delta = (y < 0 ? -Case_clearance : Case_clearance) / 2;
+			depth = lcd_screw_hole_size + floating_height + abs(y_delta); 
+			translate([x, y + y_delta, -height - floating_height / 2])
+			difference() {
+				union() {
+					cube([
+						lcd_screw_hole_size + floating_height,
+						lcd_screw_hole_size + floating_height + Case_clearance / 2,
+						floating_height
+					], center = true);
+					
+					translate([0, -depth / 2 + (y_delta > 0 ? depth : 0), -height - floating_height])
+					prismoid(
+						size1 = [lcd_screw_hole_size + floating_height, 0],
+						size2 = [lcd_screw_hole_size + floating_height, depth],
+						h = lcd_screw_hole_size + floating_height,
+						shift = [0, depth / 2 * (y_delta > 0 ? -1 : 1)]
+					);
+				}
+				
+				translate([0, -y_delta, -floating_height / 2])
+				cylinder(d = lcd_screw_hole_size - 0.15, h = floating_height);
+			}
+		}
+	}
+	
 	// Floating Feather standoffs by USB port
 	width_delta = inner_width() / 2 + (-LCD_board_width / 2 - Case_x_spacing);
 	base_xy = 5;
@@ -230,13 +264,13 @@ module standoffs() {
 	// Button standoffs
 	button_board_x = LCD_board_width / 2 + Button_diameter / 2 + Button_x_offset + Button_y_offset - Button_board_depth / 2;
 	button_board_hole_size = 3;
-	height = inner_height() - Button_z_offset - Button_total_height + Button_z_projection;
+	button_height = inner_height() - Button_z_offset - Button_total_height + Button_z_projection;
 	for (y = [Button_board_width / 2 - Button_y_standoff_inset, -Button_board_width / 2 + Button_y_standoff_inset]) {
 		translate([button_board_x + Button_x_standoff_inset, y, -inner_height()])
 		render()
 		difference() {
-			cylinder(d = button_board_hole_size + 2, h = height);
-			cylinder(d = button_board_hole_size - 0.15, h = height);
+			cylinder(d = button_board_hole_size + 2, h = button_height);
+			cylinder(d = button_board_hole_size - 0.15, h = button_height);
 		}
 	}
 	
