@@ -69,6 +69,10 @@ Feather_PCB_height = 1.6;
 Feather_retaining_pin_x_delta = 1.8;
 // Y offset from the Feather board's corner of the retaining pin
 Feather_retaining_pin_y_delta = 1.8;
+// X offset from the Feather board's corner of the retaining pin
+Feather_standoff_x_delta = 2.5;
+// Y offset from the Feather board's corner of the retaining pin
+Feather_standoff_y_delta = 2.5;
 
 /* [Case and standoff geometry] */
 // Size of most surfaces
@@ -171,7 +175,7 @@ module standoffs() {
 		}
 	}
 	
-	// Feather retaining pin
+	// Feather retaining pin by ESP32
 	translate([
 		-inner_width() / 2 + Feather_width - 3 / 2 - Feather_retaining_pin_x_delta,
 		Feather_depth / 2 - 3 / 2 - Feather_retaining_pin_y_delta,
@@ -185,8 +189,40 @@ module standoffs() {
 		-LCD_height - Feather_z_offset - Feather_PCB_height
 	])
 	cylinder(d = 1.8, h = Feather_PCB_height + 1);
+	
+	// Floating Feather standoffs by USB port
+	width_delta = inner_width() / 2 + (-LCD_board_width / 2 - Case_x_spacing);
+	base_xy = 5;
+	base_z = 3;
+	
+	difference() {
+		union() {
+			for (y = [Feather_depth / 2 - base_xy, -Feather_depth / 2]) {
+				translate([-inner_width() / 2, y, -LCD_height - Feather_z_offset - base_z - Feather_PCB_height])
+				cube([base_xy + width_delta, base_xy, 3]);
+			}
+			
+			for (y = [Feather_depth / 2 - base_xy / 2, -Feather_depth / 2 + base_xy / 2]) {
+				translate([-inner_width() / 2, y, -LCD_height - Feather_z_offset - base_z - Feather_PCB_height - base_xy])
+				prismoid(
+					size1 = [0, base_xy],
+					size2 = [base_xy + width_delta, base_xy],
+					h = base_xy,
+					shift = [(base_xy + width_delta) / 2, 0]
+				);
+			}
+		}
+	
+		for (y = [Feather_depth / 2 - Feather_standoff_y_delta, -Feather_depth / 2 + Feather_standoff_y_delta]) {
+			translate([
+				-LCD_board_width / 2 - Case_x_spacing + Feather_standoff_x_delta,
+				y,
+				-LCD_height - Feather_z_offset - base_z - Feather_PCB_height
+			])
+			cylinder(d = 2.35, h = 3);
+		}
+	}
 }
-
 
 module usb_c_hole(depth) {
 	hole_width = 10.5;
@@ -230,8 +266,7 @@ module case() {
 					[inner_width(), inner_depth(), inner_height()],
 					rounding = Case_radius,
 					edges = ["Z"]
-				);
-				
+				);				
 			}
 				
 			translate(reset_guide_origin)
@@ -301,12 +336,11 @@ module lid() {
 }
 
 //color("#ffdd88") lcd();
-color("#88ddff") feather();
+//color("#88ddff") feather();
 //color("#aaffaa") speaker();
 //color("#9999ff") battery();
 //color("#ffdddd") audio_amp();
 //color("#ff5555") button();
 
-
-%case();
+case();
 //lid();
