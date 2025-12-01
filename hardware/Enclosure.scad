@@ -57,6 +57,10 @@ Button_z_projection = 4.3;
 Button_diameter = 11.4;
 // Z offset of the button board
 Button_z_offset = 1;
+// X inset (once positioned) of the button's standoffs from the board's edge
+Button_x_standoff_inset = 2.4;
+// Y inset (once positioned) of the button's standoffs from the board's edge
+Button_y_standoff_inset = 3;
 // Feather reset button's X offset (origin is the center edge by the USB C port)
 Feather_reset_x_offset = 10.8;
 // Feather reset button's Y offset (origin is the center edge by the USB C port)
@@ -222,6 +226,29 @@ module standoffs() {
 			cylinder(d = 2.35, h = 3);
 		}
 	}
+	
+	// Button standoffs
+	button_board_x = LCD_board_width / 2 + Button_diameter / 2 + Button_x_offset + Button_y_offset - Button_board_depth / 2;
+	button_board_hole_size = 3;
+	height = inner_height() - Button_z_offset - Button_total_height + Button_z_projection;
+	for (y = [Button_board_width / 2 - Button_y_standoff_inset, -Button_board_width / 2 + Button_y_standoff_inset]) {
+		translate([button_board_x + Button_x_standoff_inset, y, -inner_height()])
+		render()
+		difference() {
+			cylinder(d = button_board_hole_size + 2, h = height);
+			cylinder(d = button_board_hole_size - 0.15, h = height);
+		}
+	}
+	
+	// Button lip on the edge of the case
+	lip_size = 2.5;
+	translate([inner_width() / 2, 0, -inner_height() + height - lip_size])
+	prismoid(
+		size1 = [0, Button_board_width],
+		size2 = [lip_size, Button_board_width],
+		h = lip_size,
+		shift = [-lip_size / 2, 0]
+	);
 }
 
 module usb_c_hole(depth) {
