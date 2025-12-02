@@ -37,8 +37,8 @@ Battery_width = 36;
 Battery_depth = 17;
 // Battery_height
 Battery_height = 7.8;
-// Battery X inset from the inner edge
-Battery_x_offset = 15;
+// Battery X inset from center, origin is left edge of battery
+Battery_x_offset = -20;
 // Speaker X offset
 Speaker_x_offset = 9;
 // I2S audio amplifier width
@@ -95,6 +95,8 @@ Case_radius = 10;
 Button_clearance = 1;
 // Reset hole diameter (enough for a paperclip)
 Reset_hole_diameter = 1.75;
+// Height of the battery retaining tabs
+Battery_retainer_height = 5;
 
 /* [Tolerances] */
 // Feather extra Z offset from the LCD
@@ -103,6 +105,14 @@ Feather_z_offset = 1;
 Battery_z_offset = 0;
 // Button X offset from the edge of the LCD board
 Button_x_offset = 1.5;
+
+/* [Self-tapping screws for the lid (M2x6 are defaults)] */
+Screw_height = 6.3;
+Screw_head_diameter = 4.1;
+Screw_head_height = 1.7;
+Screw_shaft_diameter = 1.7;
+// Distance inset from the corner
+Screw_inset = 2;
 
 module __Customizer_Limit__ () {}
 
@@ -137,7 +147,7 @@ module speaker() {
 
 module battery() {
 	translate([
-		-20,
+		Battery_x_offset,
 		-LCD_board_depth / 2,
 		-Battery_height - LCD_height - Feather_height - Feather_z_offset - Battery_z_offset
 	])
@@ -283,6 +293,13 @@ module standoffs() {
 		h = lip_size,
 		shift = [-lip_size / 2, 0]
 	);
+		
+	// battery retaining lips
+	translate([Battery_x_offset + 15, -LCD_board_depth / 2 + Battery_depth, -inner_height()])
+	cube([Battery_width - 15, 1, Battery_retainer_height]);
+	
+	translate([Battery_x_offset - 1, -LCD_board_depth / 2 + 10 / 2, -inner_height()])
+	cube([1, Battery_depth - 10, Battery_retainer_height]);
 }
 
 module usb_c_hole(depth) {
@@ -310,6 +327,47 @@ module case() {
 		Feather_reset_y_offset,
 		-inner_height()
 	];
+	
+	// lid screw holes
+	difference() {
+		intersection() {
+			union() {
+				size = Case_radius - Screw_inset;
+				for (x = [
+					inner_width() / 2,
+					-inner_width() / 2
+				]) {
+					for (y = [
+						inner_depth() / 2,
+						-inner_depth() / 2
+					]) {
+						translate([x + (x > 0 ? -size : 0), y + (y > 0 ? -size : 0), -Screw_height / 2])
+						cube([size, size, Screw_height / 2]);
+					
+						x_shift_multiplier = x < 0 ? 1 : -1;
+						y_shift_multiplier = y < 0 ? 1 : -1;
+
+						translate([x, y, -size - Screw_height / 2])
+						prismoid(
+							size1 = [0, 0],
+							size2 = [size, size],
+							h = size,
+							shift = [size / 2 * x_shift_multiplier, size / 2 * y_shift_multiplier]
+						);
+					}
+				}
+			}
+			
+			translate([0, 0, -outer_height / 2])
+			cuboid(
+				[outer_width, outer_depth, outer_height],
+				rounding = Case_radius,
+				edges = ["Z"]
+			);
+		}
+		
+		screws();
+	}
 
 	render()
 	difference() {
@@ -399,15 +457,42 @@ module lid() {
 			size2 = [LCD_viewable_width + Surface * 2, LCD_viewable_depth + Surface * 2],
 			h = Surface
 		);
+		
+		screws();
 	}
 }
 
-//color("#ffdd88") lcd();
-//color("#88ddff") feather();
-//color("#aaffaa") speaker();
-color("#9999ff") battery();
-//color("#ffdddd") audio_amp();
-color("#ff5555") button();
+
+module screw() {
+	cylinder(d = Screw_shaft_diameter, h = Screw_height, $fn = 20);
+	
+	translate([0, 0, Screw_height - Screw_head_height])
+	cylinder(d2 = Screw_head_diameter, d1 = Screw_shaft_diameter, h = Screw_head_height, $fn = 20);
+}
+
+module screws() {
+	for (x = [
+		-inner_width() / 2 + Case_radius - sin(45) * Case_radius + Screw_inset,
+		inner_width() / 2 - Case_radius + sin(45) * Case_radius - Screw_inset
+	]) {
+		for (y = [
+			-inner_depth() / 2 + Case_radius - cos(45) * Case_radius + Screw_inset,
+			inner_depth() / 2 - Case_radius + cos(45) * Case_radius - Screw_inset
+		]) {
+			translate([x, y, -Screw_height + Surface])
+			screw();
+		}
+	}
+}
+
+if ($preview) {
+	color("#ffdd88") lcd();
+	color("#88ddff") feather();
+	color("#aaffaa") speaker();
+	color("#9999ff") battery();
+	color("#ffdddd") audio_amp();
+	color("#ff5555") button();
+}
 
 case();
-//lid();
+lid();
