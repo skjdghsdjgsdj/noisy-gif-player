@@ -32,9 +32,9 @@ Speaker_depth = 30;
 // Speaker height
 Speaker_height = 5;
 // Battery_width
-Battery_width = 36;
+Battery_width = 35;
 // Battery_depth
-Battery_depth = 17;
+Battery_depth = 16;
 // Battery_height
 Battery_height = 7.8;
 // Battery X inset from center, origin is left edge of battery
@@ -47,6 +47,8 @@ Audio_amp_width = 17.78;
 Audio_amp_depth = 19.05;
 // I2S audio amplifier Z offset, which is implicitly the standoff height too
 Audio_amp_z_offset = 2;
+// I2S audio amplifier Y offset
+Audio_amp_y_offset = -1;
 // Width of the button board, not just the round button
 Button_board_width = 20.8;
 // Depth of the button board, not just the round button
@@ -96,7 +98,11 @@ Button_clearance = 1;
 // Reset hole diameter (enough for a paperclip)
 Reset_hole_diameter = 1.75;
 // Height of the battery retaining tabs
-Battery_retainer_height = 5;
+Battery_retainer_height = 6;
+// Standoff screw tolerance; standoffs are this much smaller than the screws they support. Doesn't apply to the self-tapping screws used for the lid.
+Standoff_tolerance = -0.1;
+// Radius to apply to standoff walls
+Standoff_wall_radius = 1.5;
 
 /* [Tolerances] */
 // Feather extra Z offset from the LCD
@@ -106,7 +112,7 @@ Battery_z_offset = 0;
 // Button X offset from the edge of the LCD board
 Button_x_offset = 1.5;
 
-/* [Self-tapping screws for the lid (M2x6 are defaults)] */
+/* [Self-tapping screws for the lid including tolerances (M2x6 are defaults)] */
 Screw_height = 6.3;
 Screw_head_diameter = 4.1;
 Screw_head_height = 1.7;
@@ -157,7 +163,7 @@ module battery() {
 module audio_amp() {
 	translate([
 		-Speaker_depth / 2 + Speaker_x_offset - Audio_amp_width,
-		-Audio_amp_depth + LCD_board_depth / 2,
+		-Audio_amp_depth + LCD_board_depth / 2 + Audio_amp_y_offset,
 		-inner_height() + Audio_amp_z_offset
 	])
 	import("lib/3006 MAX98357.stl");
@@ -182,33 +188,34 @@ module standoffs() {
 	for (x = [inset, Audio_amp_width - inset]) {
 		translate([
 			-Speaker_depth / 2 + Speaker_x_offset - Audio_amp_width + x,
-			-Audio_amp_depth + LCD_board_depth / 2 + Audio_amp_depth - inset,
+			-Audio_amp_depth + LCD_board_depth / 2 + Audio_amp_depth - inset + Audio_amp_y_offset,
 			-inner_height()
 		])
 		difference() {
-			cylinder(d = 4, h = Audio_amp_z_offset);
-			cylinder(d = 2.35, h = Audio_amp_z_offset);
+			cylinder(d = 2.5 + Standoff_tolerance + Standoff_wall_radius * 2, h = Audio_amp_z_offset);
+			cylinder(d = 2.5 + Standoff_tolerance, h = Audio_amp_z_offset);
 		}
 	}
 	
 	// Feather retaining pin by ESP32
+	retaining_pin_base = 4.5;
 	translate([
-		-inner_width() / 2 + Feather_width - 3 / 2 - Feather_retaining_pin_x_delta,
-		Feather_depth / 2 - 3 / 2 - Feather_retaining_pin_y_delta,
+		-inner_width() / 2 + Feather_width - retaining_pin_base / 2 - Feather_retaining_pin_x_delta,
+		Feather_depth / 2 - retaining_pin_base / 2 - Feather_retaining_pin_y_delta,
 		-inner_height()
 	])
-	cube([3, 3, inner_height() - LCD_height - Feather_z_offset - Feather_PCB_height]);
+	cube([retaining_pin_base, retaining_pin_base, inner_height() - LCD_height - Feather_z_offset - Feather_PCB_height]);
 	
 	translate([
 		-inner_width() / 2 + Feather_width - Feather_retaining_pin_x_delta,
 		Feather_depth / 2 - Feather_retaining_pin_y_delta,
 		-LCD_height - Feather_z_offset - Feather_PCB_height
 	])
-	cylinder(d = 1.8, h = Feather_PCB_height + 1);
+	cylinder(d = 2 + Standoff_tolerance, h = Feather_PCB_height + 1);
 	
 	// Floating LCD standoffs
 	lcd_screw_hole_size = 2.5;
-	floating_height = 2;
+	floating_height = 3;
 	height = LCD_height - LCD_display_height;
 	for (x = [-LCD_board_width / 2 + LCD_screw_inset, LCD_board_width / 2 - LCD_screw_inset]) {
 		for (y = [-LCD_board_depth / 2 + LCD_screw_inset, LCD_board_depth / 2 - LCD_screw_inset]) {
@@ -240,7 +247,7 @@ module standoffs() {
 	
 	// Floating Feather standoffs by USB port
 	width_delta = inner_width() / 2 + (-LCD_board_width / 2 - Case_x_spacing);
-	base_xy = 5;
+	base_xy = 4.5;
 	base_z = 3;
 	
 	difference() {
@@ -267,20 +274,20 @@ module standoffs() {
 				y,
 				-LCD_height - Feather_z_offset - base_z - Feather_PCB_height
 			])
-			cylinder(d = 2.35, h = 3);
+			cylinder(d = 2.5 + Standoff_tolerance, h = 3);
 		}
 	}
 	
 	// Button standoffs
 	button_board_x = LCD_board_width / 2 + Button_diameter / 2 + Button_x_offset + Button_y_offset - Button_board_depth / 2;
-	button_board_hole_size = 3;
+	button_board_hole_size = 2.5;
 	button_height = inner_height() - Button_z_offset - Button_total_height + Button_z_projection;
 	for (y = [Button_board_width / 2 - Button_y_standoff_inset, -Button_board_width / 2 + Button_y_standoff_inset]) {
 		translate([button_board_x + Button_x_standoff_inset, y, -inner_height()])
 		render()
 		difference() {
-			cylinder(d = button_board_hole_size + 2, h = button_height);
-			cylinder(d = button_board_hole_size - 0.15, h = button_height);
+			cylinder(d = button_board_hole_size + Standoff_tolerance + Standoff_wall_radius * 2, h = button_height);
+			cylinder(d = button_board_hole_size + Standoff_tolerance, h = button_height);
 		}
 	}
 	
@@ -462,6 +469,17 @@ module lid() {
 		
 		// screw holes
 		screws();
+	
+		// depressions for screw heads for the LCD
+		lcd_screw_hole_size = 2.5;
+		floating_height = 2;
+		height = LCD_height - LCD_display_height;
+		for (x = [-LCD_board_width / 2 + LCD_screw_inset, LCD_board_width / 2 - LCD_screw_inset]) {
+			for (y = [-LCD_board_depth / 2 + LCD_screw_inset, LCD_board_depth / 2 - LCD_screw_inset]) {
+				translate([x, y, 0])
+				cylinder(d = 5.5, h = Surface / 2);
+			}
+		}
 	}
 	
 	// reinforcement ribs with a cutout for the speaker
@@ -503,13 +521,13 @@ module screws() {
 }
 
 if ($preview) {
-	//color("#ffdd88") lcd();
-	//color("#88ddff") feather();
-	color("#aaffaa") speaker();
+	lcd();
+	//feather();
+	//color("#aaffaa") speaker();
 	//color("#9999ff") battery();
 	//color("#ffdddd") audio_amp();
 	//color("#ff5555") button();
 }
 
-//case();
-lid();
+%case();
+//lid();
