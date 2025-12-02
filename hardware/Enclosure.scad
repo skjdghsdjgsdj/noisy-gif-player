@@ -433,6 +433,7 @@ module lid() {
 	
 	render()
 	difference() {
+		// main body
 		translate([0, 0, -Surface / 2 + Surface])
 		cuboid(
 			[outer_width, outer_depth, Surface],
@@ -440,25 +441,41 @@ module lid() {
 			edges = ["Z"]
 		);
 		
+		// button hole
 		translate([
 			LCD_board_width / 2 + Button_diameter / 2 + Button_x_offset,
 			0,
 			0
-		])
-		
+		])		
 		cylinder(
 			d2 = Button_diameter + Button_clearance + Surface * 2,
 			d1 = Button_diameter + Button_clearance,
 			h = Surface
 		);
 		
+		// LCD cutout
 		prismoid(
 			size1 = [LCD_viewable_width, LCD_viewable_depth],
 			size2 = [LCD_viewable_width + Surface * 2, LCD_viewable_depth + Surface * 2],
 			h = Surface
-		);
+		);		
 		
+		// screw holes
 		screws();
+	}
+	
+	// reinforcement ribs with a cutout for the speaker
+	render()
+	difference() {
+		union() {
+			for (y = [-inner_depth() / 2, inner_depth() / 2 - 1]) {
+				translate([-inner_width() / 2 + Case_radius, y, -1])
+				cube([inner_width() - Case_radius * 2, 1, 1]);
+			}
+		}
+	
+		translate([Speaker_x_offset - Speaker_depth / 2, inner_depth() / 2 - 1, -1])
+		cube([Speaker_depth, 1, 1]);
 	}
 }
 
@@ -486,13 +503,13 @@ module screws() {
 }
 
 if ($preview) {
-	color("#ffdd88") lcd();
-	color("#88ddff") feather();
+	//color("#ffdd88") lcd();
+	//color("#88ddff") feather();
 	color("#aaffaa") speaker();
-	color("#9999ff") battery();
-	color("#ffdddd") audio_amp();
-	color("#ff5555") button();
+	//color("#9999ff") battery();
+	//color("#ffdddd") audio_amp();
+	//color("#ff5555") button();
 }
 
-case();
+//case();
 lid();
