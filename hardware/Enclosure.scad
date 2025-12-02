@@ -276,7 +276,7 @@ module standoffs() {
 	
 	// Button lip on the edge of the case
 	lip_size = 2.5;
-	translate([inner_width() / 2, 0, -inner_height() + height - lip_size])
+	translate([inner_width() / 2, 0, -lip_size - inner_height() + button_height])
 	prismoid(
 		size1 = [0, Button_board_width],
 		size2 = [lip_size, Button_board_width],
@@ -314,6 +314,7 @@ module case() {
 	render()
 	difference() {
 		union() {
+			// main case body
 			difference() {
 				translate([0, 0, -outer_height / 2])
 				cuboid(
@@ -330,12 +331,15 @@ module case() {
 				);				
 			}
 				
+			// reset hole guide (not the hole itself)
 			translate(reset_guide_origin)
 			cylinder(d = Reset_hole_diameter + 2, h = reset_guide_height);
 			
+			// standoffs (obviously)
 			standoffs();
 		}
 
+		// USB C hole
 		translate([
 			-inner_width() / 2 - Surface,
 			0, 
@@ -343,6 +347,7 @@ module case() {
 		])
 		usb_c_hole(Surface);
 
+		// speaker holes
 		translate([Speaker_x_offset, inner_depth() / 2, -Speaker_width / 2])
 		rotate([0, 90, 90])
 		union() {
@@ -357,6 +362,7 @@ module case() {
 			}
 		}
 
+		// reset hole
 		translate([0, 0, -Surface])
 		translate(reset_guide_origin)
 		cylinder(d = Reset_hole_diameter, h = reset_guide_height + Surface);
@@ -401,7 +407,7 @@ module lid() {
 //color("#aaffaa") speaker();
 color("#9999ff") battery();
 //color("#ffdddd") audio_amp();
-//color("#ff5555") button();
+color("#ff5555") button();
 
 case();
 //lid();
