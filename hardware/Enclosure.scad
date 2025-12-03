@@ -46,7 +46,7 @@ Audio_amp_width = 17.78;
 // I2S audio amplifier depth
 Audio_amp_depth = 19.05;
 // I2S audio amplifier Z offset, which is implicitly the standoff height too
-Audio_amp_z_offset = 2;
+Audio_amp_z_offset = 2.5;
 // I2S audio amplifier Y offset
 Audio_amp_y_offset = -1;
 // Width of the button board, not just the round button
@@ -230,7 +230,7 @@ module standoffs() {
 						floating_height
 					], center = true);
 					
-					translate([0, -depth / 2 + (y_delta > 0 ? depth : 0), -height - floating_height])
+					translate([0, -depth / 2 + (y_delta > 0 ? depth : 0), -height - floating_height - 0.5]) // FIXME this 0.5 is stupid
 					prismoid(
 						size1 = [lcd_screw_hole_size + floating_height, 0],
 						size2 = [lcd_screw_hole_size + floating_height, depth],
@@ -240,7 +240,7 @@ module standoffs() {
 				}
 				
 				translate([0, -y_delta, -floating_height / 2])
-				cylinder(d = lcd_screw_hole_size - 0.15, h = floating_height);
+				cylinder(d = lcd_screw_hole_size - Standoff_tolerance, h = floating_height);
 			}
 		}
 	}
@@ -490,6 +490,11 @@ module lid() {
 				translate([-inner_width() / 2 + Case_radius, y, -1])
 				cube([inner_width() - Case_radius * 2, 1, 1]);
 			}
+			
+			for (x = [-inner_width() / 2, inner_width() / 2 - 1]) {
+				translate([x, -inner_depth() / 2 + Case_radius, -1])
+				cube([1, inner_depth() - Case_radius * 2, 1]);
+			}
 		}
 	
 		translate([Speaker_x_offset - Speaker_depth / 2, inner_depth() / 2 - 1, -1])
@@ -521,13 +526,13 @@ module screws() {
 }
 
 if ($preview) {
-	lcd();
-	//feather();
-	//color("#aaffaa") speaker();
-	//color("#9999ff") battery();
-	//color("#ffdddd") audio_amp();
-	//color("#ff5555") button();
+	%speaker();
+	%lcd();
+	%audio_amp();
+	%feather();
+	%battery();
+	%button();
 }
 
-%case();
+case();
 //lid();
