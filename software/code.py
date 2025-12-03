@@ -225,13 +225,9 @@ class App:
 
 			was_pressed, hold_time = self.hardware.button.wait_for_press(timeout = idle_timeout)
 
-			if not was_pressed:
-				print(f"Idle timeout of {idle_timeout}s reached, entering deep sleep")
+			if not was_pressed or hold_time > long_hold_time:
+				print(f"Idle timeout of {idle_timeout}s reached or button was held down, entering deep sleep")
 				self.enter_deep_sleep()
-
-			if hold_time >= long_hold_time:
-				print(f"Button held for {hold_time}s, rebooting")
-				microcontroller.reset()
 
 
 hardware = Hardware(int(os.getenv("SPI_PREFERRED_SPEED_HZ", 40_000_000)))
