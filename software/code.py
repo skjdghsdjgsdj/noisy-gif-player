@@ -15,8 +15,6 @@ import gifio
 import microcontroller
 import sdcardio
 import storage
-import terminalio
-from adafruit_display_text.label import Label
 from alarm.pin import PinAlarm
 from microcontroller import watchdog
 from watchdog import WatchDogMode
@@ -40,10 +38,6 @@ BUTTON_PIN = board.D12  # Button input (active LOW to GND)
 I2S_BCLK_PIN = board.RX  # I2S bit clock
 I2S_LRC_PIN = board.TX  # I2S left/right clock
 I2S_DIN_PIN = board.D10  # I2S data input
-
-class SDMode:
-	USB = 0
-	Device = 1
 
 class Hardware:
 	def __init__(self, preferred_spi_frequency: int):
@@ -77,7 +71,7 @@ class Hardware:
 			baudrate = self.spi.frequency
 		)
 		self.vfs = storage.VfsFat(self.sd)
-		storage.mount(self.vfs, "/sd")
+		storage.mount(self.vfs, "/sd", readonly = True)
 
 	def init_display(self,
 					 dc_pin: microcontroller.Pin,
@@ -113,22 +107,6 @@ class Hardware:
 	def init_button(self, button_pin: microcontroller.Pin) -> None:
 		self.button_pin = button_pin
 		self.button = Button(pin = self.button_pin)
-
-	def set_sd_mode(self, mode: int) -> None:
-		if mode == SDMode.USB:
-			if not self.sd:
-				raise RuntimeError("SD card is not initialized")
-
-			storage.umount(self.vfs)
-			self.sd.deinit()
-			self.sd = None
-		elif mode == SDMode.Device:
-			if self.sd:
-				raise RuntimeError("SD card is already initialized")
-
-			self.init_sdcard(self.sd_cs_pin)
-		else:
-			raise ValueError(f"Unknown mode {mode}")
 
 class Button:
 	def __init__(self, pin: microcontroller.Pin, debounce_time: float = 0.05):
@@ -228,46 +206,13 @@ class App:
 		self.renderer = renderer
 		self.library = library
 
-	def enter_usb_mode(self) -> None:
-		font = terminalio.FONT
-
-		root_group = displayio.Group()
-		center_x = self.hardware.display.width // 2
-		line_height = font.bitmap.height + 5
-		start_y = (self.hardware.display.height - (2 * line_height)) // 2
-
-		root_group.append(Label(
-			font = terminalio.FONT,
-			text = "Ready for USB transfers.",
-			x = center_x,
-			y = start_y,
-			color = 0xFFFFFF,
-			anchor_point = (0.5, 0)
-		))
-
-		root_group.append(Label(
-			font = terminalio.FONT,
-			text = "Press button when done.",
-			x = center_x,
-			y = start_y + line_height,
-			color = 0xFFFFFF,
-			anchor_point = (0.5, 0)
-		))
-
-		self.hardware.display.root_group = root_group
-
-		self.hardware.set_sd_mode(SDMode.USB)
-
-	def exit_usb_mode(self) -> None:
-		self.hardware.set_sd_mode(SDMode.Device)
-
 	def enter_deep_sleep(self) -> None:
 		pin_alarm = PinAlarm(pin = self.hardware.button_pin, value = False, pull = True)
 		alarm.exit_and_deep_sleep_until_alarms(pin_alarm)
 
 	def main_loop(self) -> None:
 		last_gif_path = None
-		long_hold_time = int(os.getenv("USB_MODE_HOLD_SECONDS", 5))
+		long_hold_time = int(os.getenv("BUTTON_LONG_HOLD_SECONDS", 5))
 		idle_timeout = int(os.getenv("IDLE_TIMEOUT_SECONDS", 60))
 		while True:
 			gif_path, wav_path = library.get_random_media_pair(last_gif_path)
@@ -285,14 +230,12 @@ class App:
 				self.enter_deep_sleep()
 
 			if hold_time >= long_hold_time:
-				print(f"Button held for {hold_time}s, entering USB mode")
-				self.enter_usb_mode()
-				self.hardware.button.wait_for_press()
-				self.exit_usb_mode()
+				print(f"Button held for {hold_time}s, rebooting")
+				microcontroller.reset()
 
 
 hardware = Hardware(int(os.getenv("SPI_PREFERRED_SPEED_HZ", 40_000_000)))
-hardware.init_sdcard(sd_cs_pin = LCD_CS_PIN)
+hardware.init_sdcard(sd_cs_pin = LCD_CS_PIN) # don't init other SPI devices before the SD card or it won't work
 hardware.init_display(
 	dc_pin = LCD_DC_PIN,
 	cs_pin = LCD_CS_PIN,

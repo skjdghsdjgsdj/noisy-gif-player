@@ -19,8 +19,8 @@ GIFS_PATH = /sd/gifs
 # WAVs directory path on SD card (default: /sd/wavs)
 WAVS_PATH = /sd/wavs
 
-# Button hold time in seconds for USB mode (default: 5)
-USB_MODE_HOLD_SECONDS = 5
+# Button hold time in seconds to consider the button as being held down a long time (default: 5)
+BUTTON_LONG_HOLD_SECONDS = 5
 
 # Idle timeout in seconds before deep sleep (default: 60)
 IDLE_TIMEOUT_SECONDS = 60
