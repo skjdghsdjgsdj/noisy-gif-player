@@ -1,0 +1,29 @@
+# Watchdog timeout in milliseconds (default: 10000)
+WATCHDOG_TIMEOUT_MS = 10000
+
+# SPI preferred speed in Hz (default: 40000000)
+SPI_PREFERRED_SPEED_HZ = 40000000
+
+# SPI fallback speed in Hz (default: 25000000)
+SPI_FALLBACK_SPEED_HZ = 25000000
+
+# LCD width in pixels (default: 320)
+LCD_WIDTH = 320
+
+# LCD height in pixels (default: 170)
+LCD_HEIGHT = 170
+
+# LCD rotation in degrees (default: 0)
+LCD_ROTATION = 0
+
+# GIFs directory path on SD card (default: /sd/gifs)
+GIFS_PATH = /sd/gifs
+
+# WAVs directory path on SD card (default: /sd/wavs)
+WAVS_PATH = /sd/wavs
+
+# Button hold time in seconds for USB mode (default: 5.0)
+USB_MODE_HOLD_SECONDS = 5.0
+
+# Idle timeout in seconds before deep sleep (default: 60)
+IDLE_TIMEOUT_SECONDS = 60
