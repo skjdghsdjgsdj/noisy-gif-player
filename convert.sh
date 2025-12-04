@@ -1,11 +1,12 @@
 #!/bin/bash
 
 # FFmpeg Video to GIF/WAV Converter for CircuitPython
-# Usage: ./convert.sh input.mp4 [--fps 15]
+# Usage: ./convert.sh input.mp4 [--fps FPS] [--rotation DEGREES]
 
-if [ $# -lt 1 ] || [ $# -gt 2 ]; then
-    echo "Usage: $0 <input_video.mp4> [--fps FPS]" >&2
-    echo "  FPS: 1-30 (default: 15)" >&2
+if [ $# -lt 1 ] || [ $# -gt 5 ]; then
+    echo "Usage: $0 <input_video.mp4> [--fps FPS] [--rotation DEGREES]" >&2
+    echo "  FPS: 1-30 (default: 8)" >&2
+    echo "  Rotation: 0,90,180,270 (default: 90)" >&2
     exit 1
 fi
 
@@ -20,38 +21,91 @@ if ! command -v ffmpeg &> /dev/null; then
     exit 1
 fi
 
-fps=15
-if [ $# -eq 2 ] && [ "$2" = "--fps" ]; then
-    echo "Error: --fps requires a value (1-30)" >&2
-    exit 1
-elif [ $# -eq 3 ] && [ "$2" = "--fps" ]; then
-    fps="$3"
-    if ! [[ "$fps" =~ ^[0-9]+$ ]] || [ "$fps" -lt 1 ] || [ "$fps" -gt 30 ]; then
-        echo "Error: FPS must be an integer between 1 and 30" >&2
-        exit 1
-    fi
-    shift 2
+fps=8
+rotation=90
+width=320
+height=170
+
+# Parse arguments
+shift
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --fps)
+            shift
+            if [ $# -eq 0 ] || ! [[ "$1" =~ ^[0-9]+$ ]] || [ "$1" -lt 1 ] || [ "$1" -gt 30 ]; then
+                echo "Error: --fps requires integer 1-30" >&2
+                exit 1
+            fi
+            fps="$1"
+            shift
+            ;;
+        --rotation)
+            shift
+            if [ $# -eq 0 ] || ! [[ "$1" =~ ^(0|90|180|270)$ ]]; then
+                echo "Error: --rotation requires 0, 90, 180, or 270" >&2
+                exit 1
+            fi
+            rotation="$1"
+            shift
+            ;;
+        *)
+            echo "Error: Unknown argument '$1'" >&2
+            exit 1
+            ;;
+    esac
+done
+
+# Set resolution based on rotation
+if [ "$rotation" = "90" ] || [ "$rotation" = "270" ]; then
+    width=170
+    height=320
 fi
+
+# Map rotation to FFmpeg filter
+case "$rotation" in
+    0)
+        rotate_filter=""
+        ;;
+    90)
+        rotate_filter="transpose=1"
+        ;;
+    180)
+        rotate_filter="hflip,vflip"
+        ;;
+    270)
+        rotate_filter="transpose=2"
+        ;;
+esac
 
 base="${input%.*}"
 gif_output="${base}.gif"
 wav_output="${base}.wav"
 palette="${base}_palette.png"
 
-echo "Converting '$input' to GIF and WAV (FPS: $fps)..."
+echo "Converting '$input' to GIF and WAV..."
+echo "  FPS: $fps, Rotation: ${rotation}°, Resolution: ${width}x${height}"
 
-# Generate GIF palette (first pass)
+# Build filter chains
+palette_filters="fps=$fps"
+[ -n "$rotate_filter" ] && palette_filters+=",${rotate_filter}"
+palette_filters+=",scale=${width}:${height}:flags=lanczos:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:black,palettegen=max_colors=64:stats_mode=diff:reserve_transparent=1"
+
+gif_filters="fps=$fps"
+[ -n "$rotate_filter" ] && gif_filters+=",${rotate_filter}"
+gif_filters+=",scale=${width}:${height}:flags=lanczos:force_original_aspect_ratio=decrease,pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:black"
+
+# Generate GIF palette (first pass) - FIXED with -update 1
 if ! ffmpeg -v warning -i "$input" \
-    -vf "fps=$fps,scale=320:170:flags=lanczos:force_original_aspect_ratio=decrease,pad=320:170:(ow-iw)/2:(oh-ih)/2:black,palettegen=stats_mode=single" \
-    -frames:v 1 -y "$palette"; then
+    -vf "$palette_filters" \
+    -frames:v 1 -update 1 -y "$palette"; then
     echo "Error: Palette generation failed" >&2
     exit 1
 fi
 
-# Create GIF (second pass)
+# Create GIF (second pass) - FIXED syntax
 if ! ffmpeg -v warning -i "$input" -i "$palette" \
-    -filter_complex "fps=$fps,scale=320:170:flags=lanczos:force_original_aspect_ratio=decrease,pad=320:170:(ow-iw)/2:(oh-ih)/2:black[x];[x][1:v]paletteuse=dither=floyd_steinberg" \
-    -y "$gif_output"; then
+    -filter_complex "${gif_filters}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" \
+    -loop 0 "$gif_output" -y; then
     echo "Error: GIF creation failed" >&2
     rm -f "$palette"
     exit 1
@@ -68,5 +122,5 @@ fi
 rm -f "$palette"
 
 echo "Done! Created:"
-echo "  GIF: $gif_output (320x170, ${fps}fps, CircuitPython gifio compatible)"
+echo "  GIF: $gif_output (${width}x${height}, ${fps}fps, ${rotation}° rotation, CircuitPython gifio compatible)"
 echo "  WAV: $wav_output (mono, 8kHz, 16-bit, MAX98357A compatible)"

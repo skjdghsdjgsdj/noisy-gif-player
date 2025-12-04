@@ -1,8 +1,8 @@
-# Watchdog timeout in milliseconds (default: 10000)
-WATCHDOG_TIMEOUT_MS = 10000
+# Watchdog timeout in seconds (default: 10)
+WATCHDOG_TIMEOUT_S = 10
 
-# SPI preferred speed in Hz (default: 40000000)
-SPI_PREFERRED_SPEED_HZ = 40000000
+# SPI preferred speed in Hz (default: 25000000; use 0 to use the board's default)
+SPI_PREFERRED_SPEED_HZ = 25000000
 
 # LCD width in pixels (default: 320)
 LCD_WIDTH = 320
@@ -10,8 +10,8 @@ LCD_WIDTH = 320
 # LCD height in pixels (default: 170)
 LCD_HEIGHT = 170
 
-# LCD rotation in degrees (default: 0)
-LCD_ROTATION = 0
+# LCD rotation in degrees (default: 90)
+LCD_ROTATION = 90
 
 # GIFs directory path on SD card (default: /sd/gifs)
 GIFS_PATH = /sd/gifs
