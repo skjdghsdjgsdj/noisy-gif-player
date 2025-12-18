@@ -1,9 +1,8 @@
-import gc
 import os
 import random
 import struct
 import time
-import adafruit_st7789
+
 import alarm
 import audiobusio
 import audiocore
@@ -11,10 +10,10 @@ import board
 import busio
 import digitalio
 import displayio
-import fourwire
 import gifio
 import microcontroller
 import sdcardio
+import sdioio
 import storage
 import supervisor
 from alarm.pin import PinAlarm
@@ -46,14 +45,14 @@ else:
 	print("Warning: watchdog timer is disabled! A manual reset will be needed if there's a crash")
 
 # Pin definitions
-SD_CS_PIN = board.D11  # SD card chip select
-LCD_CS_PIN = board.D5  # LCD chip select
-LCD_DC_PIN = board.D6  # LCD data/command
-LCD_RESET_PIN = board.D13 # LCD reset pin
-BUTTON_PIN = board.D12  # Button input (active LOW to GND)
-I2S_BCLK_PIN = board.TX  # I2S bit clock
-I2S_LRC_PIN = board.RX  # I2S left/right clock
-I2S_DIN_PIN = board.D10  # I2S data input
+I2S_LRC_PIN = board.D5 # I2S left/right clock
+I2S_BCLK_PIN = board.D6 # I2S bit clock
+I2S_DIN_PIN = board.D9 # I2S data input
+SDIO_CLK_PIN = board.A0
+SDIO_CMD_PIN = board.A2
+SDIO_DET_PIN = board.SCK
+SDIO_DATA_PINS = [board.A1, board.A4, board.A5, board.A3]
+BUTTON_PIN = board.D1
 
 class Hardware:
 	def __init__(self, preferred_spi_frequency: int):
@@ -82,14 +81,18 @@ class Hardware:
 			actual_speed = self.spi.frequency
 			print(f"SPI set to {actual_speed // 1000000} MHz (no requested speed provided)")
 
-	def init_sdcard(self, sd_cs_pin: microcontroller.Pin):
+	def init_sdcard(self, clk_pin: microcontroller.Pin, cmd_pin: microcontroller.Pin, data_pins: list[microcontroller.Pin]) -> None:
 		self.sd = None
 
 		while True:
 			try:
 				print("Init SD card...", end = "")
-				self.sd_cs_pin = sd_cs_pin
-				self.sd = sdcardio.SDCard(self.spi, self.sd_cs_pin)
+				self.sd = sdioio.SDCard(
+					clock = clk_pin,
+					command = cmd_pin,
+					data = data_pins,
+					frequency = 40000000
+				)
 				print("device loaded, mounting...", end = "")
 				self.vfs = storage.VfsFat(self.sd)
 				storage.mount(self.vfs, "/sd", readonly = True)
@@ -99,24 +102,8 @@ class Hardware:
 				print(f"failed, retrying: {e}")
 				time.sleep(0.1)
 
-	def init_display(self,
-					 dc_pin: microcontroller.Pin,
-					 cs_pin: microcontroller.Pin,
-					 reset_pin: microcontroller.Pin,
-					 width: int,
-					 height: int,
-					 rotation: int):
-		print(f"Init display ({width}x{height}, rotation {rotation}°)...", end = "")
-		displayio.release_displays()
-		display_bus = fourwire.FourWire(
-			self.spi, command = dc_pin, chip_select = cs_pin, reset = reset_pin
-		)
-		self.display = adafruit_st7789.ST7789(
-			bus = display_bus,
-			width = width,
-			height = height,
-			rotation = rotation
-		)
+	def init_display(self):
+		self.display = board.DISPLAY
 
 		# suspend updates for direct writes to the LCD
 		self.display.auto_refresh = False
@@ -145,7 +132,7 @@ class Button:
 	def __init__(self, pin: microcontroller.Pin, debounce_time: float = 0.05):
 		self.dio = digitalio.DigitalInOut(pin)
 		self.dio.direction = digitalio.Direction.INPUT
-		self.dio.pull = digitalio.Pull.UP
+		self.dio.pull = digitalio.Pull.DOWN
 
 		self.debounce_time = debounce_time
 
@@ -153,7 +140,7 @@ class Button:
 		start = time.monotonic()
 
 		# wait until the initial press
-		while self.dio.value:
+		while not self.dio.value:
 			time.sleep(self.debounce_time)
 			watchdog.feed()
 
@@ -162,7 +149,7 @@ class Button:
 
 		# wait until the button is released
 		start = time.monotonic()
-		while not self.dio.value:
+		while self.dio.value:
 			time.sleep(self.debounce_time)
 			watchdog.feed()
 
@@ -205,12 +192,12 @@ class MediaRenderer:
 	def __init__(self, hardware: Hardware):
 		self.hardware = hardware
 
-	def play_wav(self, wav_path: str):
+	def play_wav(self, wav_path: str) -> None:
 		print(f"Playing {wav_path}")
 		# noinspection PyArgumentList
 		self.hardware.i2s.play(audiocore.WaveFile(wav_path))
 
-	def play_gif(self, gif_path: str) -> None:
+	def play(self, gif_path: str, wav_path: Optional[str]) -> None:
 		print(f"Rendering {gif_path}")
 
 		try:
@@ -230,13 +217,18 @@ class MediaRenderer:
 			packed_width = 0
 			packed_height = 0
 
+			x_offset = 40
+			y_offset = 51
+
+			is_first_frame = True
+
 			while True:
 				delay = max(0.0, next_delay - overhead)
 				time.sleep(delay)
 
 				if packed_width == 0 or packed_height == 0:
-					packed_width = struct.pack(">hh", 0, gif.bitmap.width - 1)
-					packed_height = struct.pack(">hh", 0, gif.bitmap.height - 1)
+					packed_width = struct.pack(">hh", x_offset, gif.bitmap.width - 1 + x_offset)
+					packed_height = struct.pack(">hh", y_offset, gif.bitmap.height - 1 + y_offset)
 				elif delay <= 0.01:
 					print(f"Warning: Not delaying between frames; overhead deficit of {int(abs(overhead - next_delay) * 1000)}ms")
 					deficit_frames += 1
@@ -260,6 +252,11 @@ class MediaRenderer:
 					if deficit_frames > 0:
 						print(f"Warning: {int(deficit_frames / rendered_frames * 100)}% of frames had no deliberate delay")
 					break
+
+				if is_first_frame:
+					if wav_path:
+						self.play_wav(wav_path)
+					is_first_frame = False
 		finally:
 			gif.deinit()
 
@@ -282,16 +279,12 @@ class App:
 			gif_path, wav_path = library.get_random_media_pair(last_gif_path)
 			print("done")
 
-			if wav_path:
-				pass
-				#renderer.play_wav(wav_path)
-
-			renderer.play_gif(gif_path)
+			renderer.play(gif_path, wav_path)
 			last_gif_path = gif_path
 
 			print("Waiting for button press or timeout")
 			was_pressed, hold_time = self.hardware.button.wait_for_press(timeout = idle_timeout)
-			print("Timeout reached" if not was_pressed else "Timeout reached" if hold_time > long_hold_time else "Button pressed")
+			print("Timeout reached" if not was_pressed else "Button held" if hold_time > long_hold_time else "Button pressed")
 
 			if not was_pressed or hold_time > long_hold_time:
 				print(f"Entering deep sleep")
@@ -299,17 +292,14 @@ class App:
 
 
 hardware = Hardware(int(os.getenv("SPI_PREFERRED_SPEED_HZ", 80_000_000)))
-hardware.init_sdcard(sd_cs_pin = SD_CS_PIN) # don't init other SPI devices before the SD card or it won't work
-hardware.init_display(
-	dc_pin = LCD_DC_PIN,
-	cs_pin = LCD_CS_PIN,
-	reset_pin = LCD_RESET_PIN,
-	width = int(os.getenv("LCD_WIDTH", 320)),
-	height = int(os.getenv("LCD_HEIGHT", 170)),
-	rotation = int(os.getenv("LCD_ROTATION", 90))
+hardware.init_sdcard(
+	clk_pin = SDIO_CLK_PIN,
+	cmd_pin = SDIO_CMD_PIN,
+	data_pins = SDIO_DATA_PINS
 )
-#hardware.init_audio(bclk_pin = I2S_BCLK_PIN, ws_pin = I2S_LRC_PIN, data_pin = I2S_DIN_PIN)
-hardware.init_button(BUTTON_PIN)
+hardware.init_display()
+hardware.init_audio(bclk_pin = I2S_BCLK_PIN, ws_pin = I2S_LRC_PIN, data_pin = I2S_DIN_PIN)
+hardware.init_button(button_pin = BUTTON_PIN)
 
 renderer = MediaRenderer(hardware)
 library = MediaLibrary(

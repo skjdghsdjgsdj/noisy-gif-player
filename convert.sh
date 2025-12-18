@@ -5,8 +5,8 @@
 
 if [ $# -lt 1 ] || [ $# -gt 5 ]; then
     echo "Usage: $0 <input_video.mp4> [--fps FPS] [--rotation DEGREES]" >&2
-    echo "  FPS: 1-30 (default: 8)" >&2
-    echo "  Rotation: 0,90,180,270 (default: 90)" >&2
+    echo "  FPS: 1-30 (default: 15)" >&2
+    echo "  Rotation: 0,90,180,270 (default: 0)" >&2
     exit 1
 fi
 
@@ -21,10 +21,10 @@ if ! command -v ffmpeg &> /dev/null; then
     exit 1
 fi
 
-fps=8
-rotation=90
-width=320
-height=170
+fps=15
+rotation=0
+width=240
+height=135
 
 # Parse arguments
 shift
@@ -57,8 +57,8 @@ done
 
 # Set resolution based on rotation
 if [ "$rotation" = "90" ] || [ "$rotation" = "270" ]; then
-    width=170
-    height=320
+    width=135
+    height=240
 fi
 
 # Map rotation to FFmpeg filter
