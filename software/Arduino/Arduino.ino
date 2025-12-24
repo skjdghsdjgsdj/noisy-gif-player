@@ -15,9 +15,9 @@
 #define WAV_DIR  "/wavs"
 
 // I2S pins (GPIO numbers)
-#define I2S_LRC   39   // WS / LRCLK
+#define I2S_LRC   37   // WS / LRCLK
 #define I2S_BCLK  38   // BCLK
-#define I2S_DIN   37   // SD / DIN
+#define I2S_DIN   39   // SD / DIN
 
 // Audio buffer size - 2KB for ~64ms chunks (balanced for GIF framerate)
 #define AUDIO_BUFFER_SIZE 2048
