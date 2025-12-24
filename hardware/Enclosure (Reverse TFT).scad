@@ -21,7 +21,7 @@ Surface = 1.5;
 Screw_height = 6.3;
 Screw_head_diameter = 4.1;
 Screw_head_height = 1.7;
-Screw_shaft_diameter = 1.7;
+Screw_shaft_diameter = 1.85;
 // Distance inset from the corner
 Screw_inset = 2;
 	
@@ -37,11 +37,9 @@ Radius = 4;
 
 Z_offset = -1.5;
 
-USB_C_Z = 3.3;
+USB_C_Z = 3.6;
 
 $fn = 50;
-
-/*
 
 module female_header(pin_count, pitch = 2.54) {
 	assert(pin_count >= 1);
@@ -84,7 +82,7 @@ color("#99ccff") {
 	female_header(16);
 
 	//translate([16.45, (0.9 * 25.4) - (0.05 * 25.4), PCB_height])
-	female_header(12);
+	//female_header(12);
 
 	import("lib/5691 ESP32 S3 Reverse TFT Feather.stl");
 }
@@ -117,13 +115,11 @@ translate([25, 28, 9])
 rotate([90, 90, 0])
 color("#99ffaa") import("lib/3923 Mini Oval Speaker.stl");
 
-*/
-
 module usb_c_hole(depth) {
 	$fn = 36;
 
-	hole_width = 10.5;
-	hole_radius = 2;
+	hole_width = 13;
+	hole_radius = 4;
 
 	for (y = [-hole_width / 2 + hole_radius, hole_width / 2 - hole_radius]) {
 		translate([0, y, 0])
@@ -155,7 +151,7 @@ module screws() {
 module case() {
 	difference() {
 		translate([-(Extra_width / 2 - 1) / 2 - 1, (0.9 * 25.4) / 2, (USB_C_Z + 5) / 2 + Z_offset])
-		cube([Extra_width / 2 - 1, 13, USB_C_Z + 5], center = true);
+		cube([Extra_width / 2 - 1, 15, USB_C_Z + 8], center = true);
 		
 		translate([-(Surface + Extra_width / 2), (0.9 * 25.4) / 2, USB_C_Z])
 		usb_c_hole(Surface + Extra_width / 2);
@@ -213,6 +209,16 @@ module case() {
 			anchor = [-1, -1, -1]
 		);
 	
+		for (y = [0.1 * 25.4, (0.9 * 25.4) - (0.1 * 25.4)]) {
+			translate([0.1 * 25.4, y, -Surface + 0.2])
+			cylinder(d = 2.35, h = abs(Z_offset));
+		}
+	
+		for (y = [1.85, (0.9 * 25.4) - 1.85]) {
+			translate([(2 * 25.4) - (0.1 * 25.4), y, -Surface + 0.2])
+			cylinder(d = 1.85, h = abs(Z_offset));
+		}
+	
 		translate([-Extra_width / 2, -Extra_depth / 2, 0])
 		cuboid(
 			[Feather_width + Extra_width, Feather_depth + Extra_depth, Inner_height],
@@ -228,34 +234,65 @@ module case() {
 			height = Surface
 		);
 		
-		translate([7.6, (0.9 * 25.4) / 2, -Surface])
+		translate([44.45, (0.9 * 25.4) / 2, -Surface])
 		cylinder(
-			d2 = 3,
-			d1 = 3 + Surface * 2,
+			d = 4.2,
 			h = Surface
 		);
 		
-		translate([44.45, (0.9 * 25.4) / 2, -Surface])
+		translate([44.45, (0.9 * 25.4) / 2, -Surface + 0.2])
 		cylinder(
-			d = 1.5,
+			d = 6.2,
 			h = Surface
 		);
+		
+		for (y_delta = [-7, 0, 7]) {
+			translate([7.6, (0.9 * 25.4) / 2 + y_delta, -Surface])
+			union() {
+				cylinder(
+					d = 1.5,
+					h = Surface
+				);
+				
+				translate([0, 0, 0.2])
+				cylinder(
+					d = 5.5,
+					h = Surface - 0.2
+				);
+			}
+		}
 		
 		translate([Feather_width / 2, Feather_depth + Extra_depth + Surface - Extra_depth / 2, Inner_height / 2])
 		rotate([90, 0, 0])
 		union() {
-			cylinder(d = 2, $fn = 6);
+			cylinder(d = 2, $fn = 6, h = Surface);
 			
 			for (i = [0 : 5]) {
 				angle = (i / 6) * 360;
 				translate([sin(angle) * 3, cos(angle) * 3, 0])
-				cylinder(d = 2, $fn = 6);
+				cylinder(d = 2, $fn = 6, h = Surface);
 			}
 		}
 		
 		translate([-(Surface + Extra_width / 2), (0.9 * 25.4) / 2, USB_C_Z - Z_offset])
 		usb_c_hole(Surface + Extra_width / 2);
+		
+		screws();
 	}
+}
+
+module button() {
+	translate([44.45, (0.9 * 25.4) / 2, -Surface + Z_offset - 1])
+	cylinder(
+		d = 4,
+		h = Surface + 1.5
+	);
+	
+	translate([44.45, (0.9 * 25.4) / 2, -Surface + Z_offset - 1 + 2.7])
+	cylinder(
+		d = 6,
+		h = 0.3
+	);
 }
 
 module backplate() {
@@ -281,4 +318,6 @@ module backplate() {
 }
 
 //case();
-backplate();
+//backplate();
+
+button();
