@@ -5,6 +5,8 @@
 #include <SPI.h>
 #include "driver/i2s.h"
 #include "esp_sleep.h"
+#include "USB.h"
+#include "USBMSC.h"
 
 #define DISPLAY_WIDTH   240
 #define DISPLAY_HEIGHT  135
@@ -26,6 +28,7 @@ Adafruit_ST7789 tft = Adafruit_ST7789(TFT_CS, TFT_DC, TFT_RST);
 AnimatedGIF gif;
 File gifFile;
 File wavFile;
+USBMSC msc;
 
 // Full-frame RGB565 backbuffer (240x135)
 static uint16_t frameBuffer[FRAMEBUFFER_SIZE];
@@ -294,9 +297,72 @@ void enterDeepSleepUntilReset() {
   esp_deep_sleep_start();
 }
 
+static int32_t onRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
+  // lba = sector number, buffer = destination, bufsize = bytes to read
+  uint8_t* buf = (uint8_t*)buffer;
+  
+  // Read entire sectors (SD cards work in 512-byte blocks)
+  for (uint32_t i = 0; i < bufsize / 512; i++) {
+    if (!SD_MMC.readRAW(buf + (i * 512), lba + i)) {
+      return -1;  // Read failed
+    }
+  }
+  return bufsize;
+}
+
+static int32_t onWrite(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
+  // Write entire sectors
+  for (uint32_t i = 0; i < bufsize / 512; i++) {
+    if (!SD_MMC.writeRAW(buffer + (i * 512), lba + i)) {
+      return -1;  // Write failed
+    }
+  }
+  return bufsize;
+}
+
+static bool onStartStop(uint8_t power_condition, bool start, bool load_eject) {
+  return true;  // Accept all start/stop commands
+}
+
+void usbMassStorageMode() {
+  tft.fillScreen(ST77XX_BLACK);
+  tft.setTextColor(ST77XX_WHITE);
+  
+  // Font size 2: each char is 12px wide, 16px tall
+  // Font size 1: each char is 6px wide, 8px tall
+  
+  // First line: "USB connected" = 13 chars × 12px = 156px wide
+  tft.setTextSize(2);
+  tft.setCursor((DISPLAY_WIDTH - 156) / 2, (DISPLAY_HEIGHT - 32) / 2);
+  tft.println("USB connected");
+  
+  // Second line: "Press button when done" = 22 chars × 6px = 132px wide
+  tft.setTextSize(1);
+  tft.setCursor((DISPLAY_WIDTH - 132) / 2, (DISPLAY_HEIGHT - 32) / 2 + 24);
+  tft.println("Press button when done");
+  
+  // Configure USB Mass Storage device WITH CALLBACKS
+  msc.vendorID("Adafruit");
+  msc.productID("ESP32-S3 SD");
+  msc.productRevision("1.0");
+  msc.onRead(onRead);
+  msc.onWrite(onWrite);
+  msc.onStartStop(onStartStop);
+  msc.mediaPresent(true);
+  msc.begin(SD_MMC.numSectors(), SD_MMC.sectorSize());
+  USB.begin();
+  
+  while(1) {
+    delay(1000);
+  }
+}
+
+
 // ---------- Setup / Loop ----------
 
 void setup() {
+  pinMode(2, INPUT_PULLDOWN);  // D2 button - explicitly enable pull-down
+
   pinMode(TFT_BACKLITE, OUTPUT);
   digitalWrite(TFT_BACKLITE, HIGH);
 
@@ -318,6 +384,10 @@ void setup() {
   gif.begin(LITTLE_ENDIAN_PIXELS);
   
   randomSeed(esp_random());
+
+  if (digitalRead(2) == HIGH) {
+    usbMassStorageMode();  // Never returns
+  }
 }
 
 void loop() {
