@@ -27,7 +27,7 @@ You'll also need a 3D printer, soldering iron, tiny screwdriver, paperclip, and 
 
 ### Step 2: Print the enclosure
 
-Print the following parts. Use 0.2mm layer height and any infill you desire.
+Print the following parts. Use 0.2mm layer height and any infill you desire. The STLs are in the latest release download on GitHub.
 
 * Print `Case.stl` with the screen opening on the print bed. Use paint-on supports for the four screw holes in the corners of the case. You can do the same for the USB C port, but if your printer bridges well, you should be fine without them.
 * Print `Backplate.stl` with the two ribs facing upwards.
@@ -35,7 +35,7 @@ Print the following parts. Use 0.2mm layer height and any infill you desire.
 
 ### Step 3: Make at least GIF
 
-The code always assumes at least one GIF is loaded onto the SD card, so make one. These instructions assume macOS or Linux. You'll need to adapt the instructions or the code for Windows.
+The code assumes at least one GIF is loaded onto the SD card, so make one. These instructions assume macOS or Linux. You'll need to adapt the instructions or the code for Windows.
 
 The repository includes a script called `convert.sh` that runs FFmpeg with very specific arguments to make GIFs and WAVs compatible with the board. Install FFmpeg before continuing. You'll need a computer with a microSD card reader.
 
