@@ -4,6 +4,8 @@
 
 It's a little portable device with a tiny screen and speaker to play animated GIFs, along with sound, from a microSD card.
 
+![Hero image](docs/img/hero.png)
+
 ## How do I build one?
 
 ### Step 1: Buy parts
