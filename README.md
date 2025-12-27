@@ -147,7 +147,7 @@ If you press the reset button twice quickly, it might enter a USB bootloader mod
 
 ### Creating GIFs
 
-Use `convert.sh` as described above to create GIFs. If a GIF has a corresponding WAV, then both play. If there is no corresponding WAV, then the GIF will play silently.
+Use `convert.sh` as described above to create GIFs. If a GIF has a corresponding WAV, then both play. If there is no corresponding WAV, then the GIF will play silently; that is, the WAV for a given GIF is optional.
 
 `convert.sh` does several things:
 
@@ -172,3 +172,11 @@ The more convenient way is by a USB cable, but it's much slower. To do this:
 This reboots the board into USB loading mode, and a message on the screen states as such. A new drive will appear on your computer when connected by USB. The name will be the same as whatever the SD card was named when you formatted it. You can now manage files on the drive, but transfer speeds will be much slower vs. directly accessing the SD card through a reader.
 
 Once you're done managing the files, eject the drive from your computer, then press the Reset button.
+
+## Known issues
+
+* **The OpenSCAD code is terrible and a lot of the math is wrong if you adjust some settings, like surface thickness.** Sure is. I needed to build this quickly so I hardcoded a _lot_ of things. I welcome any attempts to clean up or just completely redo the enclosure code.
+* **Some of the Arduino code is also terrible.** Because it is largely and shamefully AI generated for the same reason of time constraints, plus C++ not being my speciality. At least it works.
+* **Pressing the Reset button twice in a specific pattern enters some special bootloader mode.** I know; this is built into the Feather by default and I'm not sure how to disable it.
+* **The USB transfer speed is super slow.** That's a limitation of the board. I don't think there's any way to make it faster. If you want to transfer a lot of data, take out the SD card and put it in a card reader.
+* **If I load a lot of GIFs, some don't show up in rotation.** The code artificially limits the list of GIFs to 64, but you can increase this.
