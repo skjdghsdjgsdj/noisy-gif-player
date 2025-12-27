@@ -180,3 +180,4 @@ Once you're done managing the files, eject the drive from your computer, then pr
 * **Pressing the Reset button twice in a specific pattern enters some special bootloader mode.** I know; this is built into the Feather by default and I'm not sure how to disable it.
 * **The USB transfer speed is super slow.** That's a limitation of the board. I don't think there's any way to make it faster. If you want to transfer a lot of data, take out the SD card and put it in a card reader.
 * **If I load a lot of GIFs, some don't show up in rotation.** The code artificially limits the list of GIFs to 64, but you can increase this.
+* **There's no low battery warning.** Yes I should add that. There's an onboard I2C battery monitor that should work for this purpose; I just haven't programmed that in yet.
