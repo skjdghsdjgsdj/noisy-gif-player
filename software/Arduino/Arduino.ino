@@ -288,8 +288,18 @@ void audioTask(void *parameter) {
 // ---------- Deep sleep helper: optimized for lowest power consumption ----------
 
 void enterDeepSleepUntilReset() {
+  // Power off NeoPixel
+  pinMode(39, OUTPUT);
+  digitalWrite(39, LOW);
+
   digitalWrite(TFT_BACKLITE, LOW);
   digitalWrite(TFT_I2C_POWER, LOW);
+
+  // Power down SPI bus
+  SPI.end();
+
+  // Disable SD card before sleep
+  SD_MMC.end();
   
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_VDDSDIO, ESP_PD_OPTION_OFF);
