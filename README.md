@@ -133,6 +133,8 @@ These instructions assume you have basic experience with the Arduino IDE.
 
 Press the Reset button. Your GIF should play, along with sound! Once the GIF is done, the board sleeps. Pressing the button resets it and plays the GIF again.
 
+**Tip**: if you press the reset button twice with specific timing, the board enters a UF2 bootloader mode. This can be annoying. If you want to disable it, select **Tools** → **Partition Scheme** and "Huge APP (3MB No OTA/1MB SPIFFS)" or a similar entry, then flash the board again.
+
 ## Usage
 
 The physical 3D printed button presses the Reset button on the Feather. This will do one of several things:
@@ -177,7 +179,6 @@ Once you're done managing the files, eject the drive from your computer, then pr
 
 * **The OpenSCAD code is terrible and a lot of the math is wrong if you adjust some settings, like surface thickness.** Sure is. I needed to build this quickly so I hardcoded a _lot_ of things. I welcome any attempts to clean up or just completely redo the enclosure code.
 * **Some of the Arduino code is also terrible.** Because it is largely and shamefully AI generated for the same reason of time constraints, plus C++ not being my speciality. At least it works.
-* **Pressing the Reset button twice in a specific pattern enters some special bootloader mode.** I know; this is built into the Feather by default and I'm not sure how to disable it.
 * **The USB transfer speed is super slow.** That's a limitation of the board. I don't think there's any way to make it faster. If you want to transfer a lot of data, take out the SD card and put it in a card reader.
 * **If I load a lot of GIFs, some don't show up in rotation.** The code artificially limits the list of GIFs to 64, but you can increase this.
 * **There's no low battery warning.** Yes I should add that. There's an onboard I2C battery monitor that should work for this purpose; I just haven't programmed that in yet.
