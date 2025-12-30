@@ -21,6 +21,9 @@
 #define I2S_BCLK  38   // BCLK
 #define I2S_DIN   39   // SD / DIN
 
+// Other pins
+#define NEOPIXEL_POWER 21
+
 // Audio buffer size - 2KB for ~64ms chunks (balanced for GIF framerate)
 #define AUDIO_BUFFER_SIZE 2048
 
@@ -36,16 +39,12 @@ static uint16_t frameBuffer[FRAMEBUFFER_SIZE];
 // Global audio buffer
 static uint8_t audioBuffer[AUDIO_BUFFER_SIZE];
 
-bool playedOnce = false;
-bool i2sInitialized = false;
-uint32_t currentSampleRate = 16000;
-
 // Dual-core synchronization
 volatile bool audioActive = false;
-volatile bool playbackComplete = false;
-TaskHandle_t audioTaskHandle = NULL;
+
 
 // ----------- Utility: random GIF + matching WAV selection -----------
+
 
 bool chooseRandomGifAndWav(String &gifPath, String &wavPath) {
   File dir = SD_MMC.open(GIF_DIR);
@@ -64,20 +63,19 @@ bool chooseRandomGifAndWav(String &gifPath, String &wavPath) {
       }
       int slashPos = path.lastIndexOf('/');
       String base = (slashPos >= 0) ? path.substring(slashPos + 1) : path;
-      if (base.length() > 0 && base[0] != '.') {
-        String lower = base;
-        lower.toLowerCase();
-        if (lower.endsWith(".gif")) {
-          candidates[count++] = path;
-        }
+      String lower = base;
+      lower.toLowerCase();
+      if (lower.endsWith(".gif") && base[0] != '.') {
+        candidates[count++] = path;
       }
+
     }
     f = dir.openNextFile();
   }
   dir.close();
   if (count == 0) return false;
 
-  size_t idx = random(0, count);
+  size_t idx = esp_random() % count;
   gifPath = candidates[idx];
 
   int slashPos = gifPath.lastIndexOf('/');
@@ -86,11 +84,12 @@ bool chooseRandomGifAndWav(String &gifPath, String &wavPath) {
   if (dotPos >= 0) base = base.substring(0, dotPos);
   wavPath = String(WAV_DIR) + "/" + base + ".wav";
 
+
   return true;
 }
 
-// ---------- AnimatedGIF file callbacks (SD_MMC) ----------
 
+// ---------- AnimatedGIF file callbacks (SD_MMC) ----------
 void *GIFOpenFile(const char *fname, int32_t *pSize) {
   gifFile = SD_MMC.open(fname, FILE_READ);
   if (gifFile) {
@@ -101,8 +100,7 @@ void *GIFOpenFile(const char *fname, int32_t *pSize) {
 }
 
 void GIFCloseFile(void *pHandle) {
-  File *f = static_cast<File *>(pHandle);
-  if (f != NULL) f->close();
+  // nothing to do; deep sleep is next
 }
 
 int32_t GIFReadFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen) {
@@ -116,15 +114,15 @@ int32_t GIFReadFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen) {
   return iBytesRead;
 }
 
+
 int32_t GIFSeekFile(GIFFILE *pFile, int32_t iPosition) {
   File *f = (File *)pFile->fHandle;
   f->seek(iPosition);
-  pFile->iPos = (int32_t)f->position();
-  return pFile->iPos;
+  pFile->iPos = iPosition;
+  return iPosition;
 }
 
 // ---------- GIFDraw: Adafruit logic into frameBuffer, full-frame blit at end ----------
-
 void GIFDraw(GIFDRAW *pDraw) {
   uint8_t *s;
   uint16_t *d, *usPalette, usTemp[DISPLAY_WIDTH];
@@ -204,19 +202,16 @@ void GIFDraw(GIFDRAW *pDraw) {
 }
 
 // ---------- I2S setup and WAV helpers ----------
-
-void setupI2S() {
-  if (i2sInitialized) return;
-  
+void setupI2S(uint32_t sampleRate) {
   i2s_config_t i2s_config = {
     .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
-    .sample_rate = currentSampleRate,
+    .sample_rate = sampleRate,
     .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
     .channel_format = I2S_CHANNEL_FMT_ONLY_LEFT,
     .communication_format = I2S_COMM_FORMAT_I2S_MSB,
     .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
-    .dma_buf_count = 16,   // Changed: 16 buffers instead of 8
-    .dma_buf_len = 512,    // Changed: 512 samples instead of 1024
+    .dma_buf_count = 16,
+    .dma_buf_len = 512,
     .use_apll = true,
     .tx_desc_auto_clear = true,
     .fixed_mclk = 0
@@ -231,30 +226,42 @@ void setupI2S() {
 
   i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
   i2s_set_pin(I2S_NUM_0, &pin_config);
-  i2s_zero_dma_buffer(I2S_NUM_0);
-  
-  i2sInitialized = true;
 }
 
 // Parse WAV header and extract sample rate, then skip to data
-bool openWav(const String &wavPath) {
+uint32_t openWav(const String &wavPath) {
   wavFile = SD_MMC.open(wavPath.c_str(), FILE_READ);
-  if (!wavFile) return false;
-  if (wavFile.size() < 44) return false;
+  if (!wavFile) return 0;
+  if (wavFile.size() < 44) return 0;
   
-  // Read sample rate from WAV header at offset 24 (little-endian 32-bit)
+  // Read sample rate from WAV header at offset 24
   wavFile.seek(24);
   uint8_t rateBytes[4];
   wavFile.read(rateBytes, 4);
-  currentSampleRate = rateBytes[0] | (rateBytes[1] << 8) | (rateBytes[2] << 16) | (rateBytes[3] << 24);
+  uint32_t sampleRate = rateBytes[0] | (rateBytes[1] << 8) | (rateBytes[2] << 16) | (rateBytes[3] << 24);
   
-  // Skip to data after 44-byte header
-  wavFile.seek(44);
-  return true;
+  // Find "data" chunk by searching through chunks
+  wavFile.seek(12);  // Start after RIFF header
+  char chunkId[4];
+  uint32_t chunkSize;
+  
+  while (wavFile.available()) {
+    if (wavFile.read((uint8_t*)chunkId, 4) != 4) return 0;
+    if (wavFile.read((uint8_t*)&chunkSize, 4) != 4) return 0;
+    
+    if (memcmp(chunkId, "data", 4) == 0) {
+      // Found data chunk, we're positioned right at the audio data
+      return sampleRate;
+    }
+    
+    // Skip this chunk's data
+    wavFile.seek(wavFile.position() + chunkSize);
+  }
+  
+  return 0;  // No data chunk found
 }
 
 // ---------- Audio task running on Core 0 ----------
-
 void audioTask(void *parameter) {
   while (audioActive) {
     if (!wavFile || !wavFile.available()) {
@@ -286,13 +293,22 @@ void audioTask(void *parameter) {
 }
 
 // ---------- Deep sleep helper: optimized for lowest power consumption ----------
-
 void enterDeepSleepUntilReset() {
-  // Power off NeoPixel
-  pinMode(39, OUTPUT);
-  digitalWrite(39, LOW);
+  const uint32_t FADE_DURATION_MS = 500;
+  uint32_t startTime = millis();
+  uint32_t elapsed;
+  
+  while ((elapsed = millis() - startTime) < FADE_DURATION_MS) {
+    int brightness = 255 - (255 * elapsed / FADE_DURATION_MS);
+    analogWrite(TFT_BACKLITE, brightness);
+    delay(1);  // Small delay to prevent tight loop
+  }
 
   digitalWrite(TFT_BACKLITE, LOW);
+
+  // Power off NeoPixel
+  pinMode(NEOPIXEL_POWER, OUTPUT);
+  digitalWrite(NEOPIXEL_POWER, LOW);
   digitalWrite(TFT_I2C_POWER, LOW);
 
   // Power down SPI bus
@@ -308,50 +324,41 @@ void enterDeepSleepUntilReset() {
 }
 
 static int32_t onRead(uint32_t lba, uint32_t offset, void* buffer, uint32_t bufsize) {
-  // lba = sector number, buffer = destination, bufsize = bytes to read
   uint8_t* buf = (uint8_t*)buffer;
   
-  // Read entire sectors (SD cards work in 512-byte blocks)
   for (uint32_t i = 0; i < bufsize / 512; i++) {
     if (!SD_MMC.readRAW(buf + (i * 512), lba + i)) {
-      return -1;  // Read failed
+      return -1;
     }
   }
   return bufsize;
 }
 
 static int32_t onWrite(uint32_t lba, uint32_t offset, uint8_t* buffer, uint32_t bufsize) {
-  // Write entire sectors
   for (uint32_t i = 0; i < bufsize / 512; i++) {
     if (!SD_MMC.writeRAW(buffer + (i * 512), lba + i)) {
-      return -1;  // Write failed
+      return -1;
     }
   }
   return bufsize;
 }
 
 static bool onStartStop(uint8_t power_condition, bool start, bool load_eject) {
-  return true;  // Accept all start/stop commands
+  return true;
 }
 
 void usbMassStorageMode() {
   tft.fillScreen(ST77XX_BLACK);
   tft.setTextColor(ST77XX_WHITE);
   
-  // Font size 2: each char is 12px wide, 16px tall
-  // Font size 1: each char is 6px wide, 8px tall
-  
-  // First line: "USB connected" = 13 chars × 12px = 156px wide
   tft.setTextSize(2);
   tft.setCursor((DISPLAY_WIDTH - 156) / 2, (DISPLAY_HEIGHT - 32) / 2);
   tft.println("USB connected");
   
-  // Second line: "Press button when done" = 22 chars × 6px = 132px wide
   tft.setTextSize(1);
   tft.setCursor((DISPLAY_WIDTH - 132) / 2, (DISPLAY_HEIGHT - 32) / 2 + 24);
   tft.println("Press button when done");
   
-  // Configure USB Mass Storage device WITH CALLBACKS
   msc.vendorID("Adafruit");
   msc.productID("ESP32-S3 SD");
   msc.productRevision("1.0");
@@ -367,18 +374,15 @@ void usbMassStorageMode() {
   }
 }
 
-
 // ---------- Setup / Loop ----------
-
 void setup() {
-  pinMode(2, INPUT_PULLDOWN);  // D2 button - explicitly enable pull-down
+  pinMode(2, INPUT_PULLDOWN);
 
   pinMode(TFT_BACKLITE, OUTPUT);
   digitalWrite(TFT_BACKLITE, HIGH);
 
   pinMode(TFT_I2C_POWER, OUTPUT);
   digitalWrite(TFT_I2C_POWER, HIGH);
-  delay(10);
 
   SPI.begin();
   tft.setSPISpeed(80000000);
@@ -396,35 +400,27 @@ void setup() {
   randomSeed(esp_random());
 
   if (digitalRead(2) == HIGH) {
-    usbMassStorageMode();  // Never returns
+    usbMassStorageMode();
   }
 }
 
 void loop() {
-  if (playedOnce) {
+  String gifPath, wavPath;
+  if (!chooseRandomGifAndWav(gifPath, wavPath)) {
     enterDeepSleepUntilReset();
   }
 
-  String gifPath, wavPath;
-  chooseRandomGifAndWav(gifPath, wavPath);
-
-  bool haveWav = SD_MMC.exists(wavPath.c_str());
-  if (haveWav) {
-    if (!openWav(wavPath)) haveWav = false;
-  }
+  uint32_t sampleRate = openWav(wavPath);
+  bool haveWav = (sampleRate > 0);
 
   if (haveWav) {
-    setupI2S();
+    setupI2S(sampleRate);
   }
 
   if (!gif.open(gifPath.c_str(),
                 GIFOpenFile, GIFCloseFile, GIFReadFile, GIFSeekFile, GIFDraw)) {
-    if (haveWav) wavFile.close();
-    playedOnce = true;
     enterDeepSleepUntilReset();
   }
-
-  gif.playFrame(true, NULL);
 
   if (haveWav) {
     audioActive = true;
@@ -434,33 +430,14 @@ void loop() {
       4096,
       NULL,
       1,
-      &audioTaskHandle,
+      NULL,  // Don't store handle - we don't use it
       0
     );
   }
 
-  bool moreFrames = true;
-  while (moreFrames) {
-    moreFrames = gif.playFrame(true, NULL);
-    
-    if (haveWav && !audioActive) {
-      break;
-    }
-    
-    yield();
+  while (gif.playFrame(true, NULL)) {
+    // pass
   }
 
-  if (haveWav && audioActive) {
-    audioActive = false;
-    if (audioTaskHandle != NULL) {
-      vTaskDelay(100 / portTICK_PERIOD_MS);
-      audioTaskHandle = NULL;
-    }
-  }
-
-  gif.close();
-  if (haveWav) wavFile.close();
-
-  playedOnce = true;
   enterDeepSleepUntilReset();
 }
