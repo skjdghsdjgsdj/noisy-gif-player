@@ -145,7 +145,7 @@ The physical 3D printed button presses the Reset button on the Feather. This wil
 
 The battery should last a long time, but it's not a good idea to let it discharge too deeply. Charge the board with a USB C cable periodically.
 
-If you press the reset button twice quickly, it might enter a USB bootloader mode that's built into the board. Don't use this mode; just press Reset once again to resume normal operation.
+
 
 ### Creating GIFs
 
