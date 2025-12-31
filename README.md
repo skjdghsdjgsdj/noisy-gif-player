@@ -128,7 +128,7 @@ When soldering the male headers, you may have rows of headers that have more pin
 These instructions assume you have basic experience with the Arduino IDE.
 
 1. Install the Arduino IDE and set it up for this specific board per [Adafruit's instructions](https://learn.adafruit.com/esp32-s3-reverse-tft-feather/arduino-ide-setup-2).
-2. Open `software/Arduino/Arduino.ino` and install the following libraries. Install dependencies if prompted.
+2. Open `software/Arduino/Arduino.ino` and install the following libraries via Sketch → Include Library → Manage Libraries. Install dependencies if prompted.
    1. "Adafruit GFX Library" by Adafruit
    2. "Adafruit ST7735 and ST7789 Library" by Adafruit
    3. "AnimatedGIF" by Larry Bank
