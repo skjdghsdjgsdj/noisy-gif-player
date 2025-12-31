@@ -9,7 +9,11 @@ It's a little portable device with a tiny screen and speaker to play animated GI
 
 ## How do I build one?
 
-These instructions assume macOS or Linux. You'll need to adapt the instructions or the code for Windows.
+You need a few parts as documented here, along with:
+
+* Some soldering experience
+* A 3D printer
+* A computer running macOS or Linux; for Windows, you will need to modify the `convert.sh` script to make it compatible (PRs welcome!)
 
 ### Step 1: Buy parts
 
@@ -32,8 +36,8 @@ You'll need these supplies:
   * 2&times; M2x4 screws
   * 4&times; [countersunk self-tapping M2x6 screws](https://www.amazon.com/dp/B09DB5SMCZ?th=1)
 * A microSD card of pretty much any size
-
-And finally, you'll need a 3D printer, soldering iron, tiny screwdriver, paperclip, and USB C cable.
+* A paperclip
+* A USB C cable
 
 ### Step 2: Print the enclosure
 
@@ -52,8 +56,20 @@ The repository includes a script called `convert.sh` that runs FFmpeg with very 
 1. Download a video, GIF, or anything else of your choosing to your computer.
 2. Open a terminal and `cd` to the project's directory.
 3. Run `chmod +x convert.sh` to make the conversion script executable.
-4. Assuming your source file is called `test.mp4`, run `convert.sh test.mp4`. This will output in the same location `test.gif` and `test.wav`.
-5. Format your SD card as FAT32. Create two directories in the root: `gifs` and `wavs`. Copy `test.gif` to `gifs/` and `test.wav` to `wavs/`.
+4. Assuming your source file is called `test.mp4` and is in the same directory, run `./convert.sh test.mp4`. This will output in the same directory a `test.gif` and `test.wav`. If your `test.mp4` is silent, delete the resulting `test.wav`.
+5. Format your SD card as FAT32.
+6. Create two directories in the root: `gifs` and `wavs`.
+7. Copy `test.gif` to `gifs/` and `test.wav` (if it exists) to `wavs/`.
+
+The resulting SD card structure should look like:
+
+```
+SD card root (FAT32)
+ ├── gifs/
+ │   └── test.gif
+ └── wavs/
+     └── test.wav
+```
 
 ### Step 4: Physical assembly
 
