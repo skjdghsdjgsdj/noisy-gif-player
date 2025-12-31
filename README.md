@@ -15,11 +15,11 @@ You need:
 * Some soldering experience
 * A 3D printer
 * A computer:
-  * Running macOS or Linux
+  * Running macOS or Linux<sup>*</sup>
   * With a microSD card reader
   * With FFmpeg installed
 
-For Windows, you will need to modify the `convert.sh` script to make it compatible (PRs welcome!).
+<sup>*</sup> This is because the script that creates compatible GIFs/WAVs is written in Bash. On Windows, you'll need to port it to PowerShell, like `convert.ps1`. PRs welcome!
 
 ### Step 1: Buy parts
 
@@ -66,6 +66,12 @@ First, prepare your environment. This only needs to be done once:
 1. In a terminal, `cd` to the project's directory and run `chmod +x convert.sh` to make the conversion script executable.
 2. Format your SD card as FAT32.
 3. Create two directories in the root: `gifs` and `wavs`.
+
+Now, convert a video into a compatible GIF and WAV format:
+
+1. Download a video to your computer that you want to load. Pick a video that's only a few seconds long because longer ones might drift out of audio sync. Let's assume it's called `test.mp4` and you stored it in the same directory as this project.
+2. Open a terminal and `cd` to the project's directory.
+3. Run `./convert.sh test.mp4`. This outputs `test.gif` and test.wav in the same directory.
 4. Copy `test.gif` to `gifs/` and `test.wav` to `wavs/`.
 
 The resulting SD card structure should look like:
@@ -77,12 +83,6 @@ SD card root
  └── wavs/
      └── test.wav
 ```
-
-Now, convert a video into a compatible GIF and WAV format:
-
-1. Download a video to your computer that you want to load. Pick something only a few seconds long. Let's assume it's called `test.mp4` and you stored it in the same directory as this project.
-2. Open a terminal and `cd` to the project's directory.
-4. Run `./convert.sh test.mp4`. This outputs `test.gif` and test.wav in the same directory.
 
 ### Step 4: Physical assembly
 
@@ -169,7 +169,7 @@ Press the Reset button. Your GIF and WAV should play! Once the GIF is done, the 
 
 ## Usage
 
-The physical 3D printed button presses the Reset button on the Feather, playing a random GIF. The code will avoid playing the same GIF twice  if more than one GIF is loaded.
+The physical 3D printed button presses the Reset button on the Feather, playing a random GIF. The code will avoid playing the same GIF twice if more than one GIF is loaded.
 
 The battery should last a long time, but it's not a good idea to let it discharge too deeply. Charge the board with a USB C cable periodically. It is safe to keep a USB cable connected even after the battery is done charging.
 
@@ -177,7 +177,7 @@ The battery should last a long time, but it's not a good idea to let it discharg
 
 There are two ways to load a GIF and WAV.
 
-The fastest way for a lot of GIFs and WAVs is directly via the SD card. Consider this option when you first build the project. Once you've build the project, it can be a pain to take it apart to get the SD card out.
+The fastest way for a lot of GIFs and WAVs is directly via the SD card. Consider this option when you first build the project. Once you've built the project, it can be a pain to take it apart to get the SD card out.
 
 The more convenient way is by a USB cable, but transfer speeds are much slower than using the SD card directly:
 
