@@ -55,8 +55,8 @@ Read through these instructions first before actually starting them. Everything 
 Here's a logical diagram of how the components are connected, for reference. In particular, note the following:
 
 * The Feather's `GND` pin is shared, but two separate `3V` pins are used
-* The SD breakout aligns to the _second_ 3V pin through `SCK`
-* The I2S amplifier aligns to `MI` through `TX`
+* The I2S amplifier aligns to `MI` through `TX`; the _first_ 3V pin gets wired to the I2S amplifier's power pin
+* The SD breakout aligns to the _second_ 3V pin, the GND pin, and various GPIO pins up through `SCK`; all the SD breakout's connections are through headers, not wires
 * `RST`, `MO`, and `DB` are unused on the row of 16 pins
 * None of the pins on the row of 12 pins are used
 
