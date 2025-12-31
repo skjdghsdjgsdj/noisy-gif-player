@@ -36,7 +36,7 @@ Print the following parts. Use 0.2mm layer height and any infill you desire. The
 * Print `Backplate.stl` with the two ribs facing upwards.
 * Print `Button.stl` with the wider part of the button on the print bed.
 
-### Step 3: Make at least GIF
+### Step 3: Make a GIF
 
 The code assumes at least one GIF is loaded onto the SD card, so make one. These instructions assume macOS or Linux. You'll need to adapt the instructions or the code for Windows.
 
