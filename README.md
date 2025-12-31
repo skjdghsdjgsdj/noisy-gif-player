@@ -145,7 +145,7 @@ The physical 3D printed button presses the Reset button on the Feather. This wil
 
 The battery should last a long time, but it's not a good idea to let it discharge too deeply. Charge the board with a USB C cable periodically.
 
-
+The code will avoid playing the same GIF twice in a row. When GIF playback starts, the path to that GIF is stored in NVRAM. When the board resets, it will read NVRAM and avoid playing that GIF again, assuming more than one GIF is stored on the SD card.
 
 ### Creating GIFs
 
