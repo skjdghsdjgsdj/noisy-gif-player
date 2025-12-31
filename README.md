@@ -122,10 +122,9 @@ These instructions assume you have basic experience with the Arduino IDE.
 
 1. Install the Arduino IDE and set it up for this board per [Adafruit's instructions](https://learn.adafruit.com/esp32-s3-reverse-tft-feather/arduino-ide-setup-2).
 2. Open `software/Arduino/Arduino.ino` and install the following libraries. Install dependencies if prompted.
-   1. "SD" by Adafruit
-   2. "Adafruit GFX Library" by Adafruit
-   3. "Adafruit ST7735 and ST7789 Library" by Adafruit
-   4. "AnimatedGIF" by Larry Bank
+   1. "Adafruit GFX Library" by Adafruit
+   2. "Adafruit ST7735 and ST7789 Library" by Adafruit
+   3. "AnimatedGIF" by Larry Bank
 3. Connect the board to your computer via a USB C cable.
 4. Using a paperclip, press and hold D0. While holding D0, press the Reset button, then release D0. When holding the board with the 3D printed button to the right of the screen, D0 is the top-left pinhole for a paperclip.
 5. Connect to the board in the Arduino IDE.
