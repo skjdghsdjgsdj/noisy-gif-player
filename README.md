@@ -9,24 +9,31 @@ It's a little portable device with a tiny screen and speaker to play animated GI
 
 ## How do I build one?
 
+These instructions assume macOS or Linux. You'll need to adapt the instructions or the code for Windows.
+
 ### Step 1: Buy parts
 
-You need these parts:
+You need these parts. Prices are USD MSRP at the time of publishing.
 
-* [Adafruit ESP32-S3 Reverse TFT Feather](https://www.adafruit.com/product/5691)
-* [Adafruit SDIO breakout](https://www.adafruit.com/product/4682)
-* [Adafruit I2S MAX98357A breakout](https://www.adafruit.com/product/3006)
-* [Mini oval speaker](https://www.adafruit.com/product/3923)
-* [Female headers for Feathers](https://www.adafruit.com/product/2886)
+| Part                                                                           | Purpose                                | Price  |
+|--------------------------------------------------------------------------------|----------------------------------------|--------|
+| [Adafruit ESP32-S3 Reverse TFT Feather](https://www.adafruit.com/product/5691) | The brains of the project, plus an LCD | $24.95 |
+| [Adafruit SDIO breakout](https://www.adafruit.com/product/4682)                | Stores GIFs and WAVs                   | $3.50  |
+| [Adafruit I2S MAX98357A breakout](https://www.adafruit.com/product/3006)       | Plays audio to a speaker               | $5.95  |
+| [Mini oval speaker](https://www.adafruit.com/product/3923)                     | An itty bitty speaker                  | $1.95  |
+| [Female headers for Feathers](https://www.adafruit.com/product/2886)           | Physical assembly                      | $0.95  |
+| [400mAH battery for Feathers](https://www.adafruit.com/product/3898)           | The battery                            | $6.95  |
+
+You'll need these supplies:
+
 * [Solid core hookup wire](https://www.adafruit.com/product/1311)
-* [400mAH battery for Feathers](https://www.adafruit.com/product/3898)
 * Some screws:
   * 2&times; M2.5x4 screws
   * 2&times; M2x4 screws
   * 4&times; [countersunk self-tapping M2x6 screws](https://www.amazon.com/dp/B09DB5SMCZ?th=1)
-* A microSD card
+* A microSD card of pretty much any size
 
-You'll also need a 3D printer, soldering iron, tiny screwdriver, paperclip, and USB C cable.
+And finally, you'll need a 3D printer, soldering iron, tiny screwdriver, paperclip, and USB C cable.
 
 ### Step 2: Print the enclosure
 
@@ -38,7 +45,7 @@ Print the following parts. Use 0.2mm layer height and any infill you desire. The
 
 ### Step 3: Make a GIF
 
-The code assumes at least one GIF is loaded onto the SD card, so make one. These instructions assume macOS or Linux. You'll need to adapt the instructions or the code for Windows.
+At least one GIF must be loaded onto the SD card for the project to function. The GIF follows a very specific format; any random GIF you find on the internet is unlikely to work.
 
 The repository includes a script called `convert.sh` that runs FFmpeg with very specific arguments to make GIFs and WAVs compatible with the board. Install FFmpeg before continuing. You'll need a computer with a microSD card reader.
 
@@ -120,13 +127,13 @@ When soldering the male headers, you may have rows of headers that have more pin
 
 These instructions assume you have basic experience with the Arduino IDE.
 
-1. Install the Arduino IDE and set it up for this board per [Adafruit's instructions](https://learn.adafruit.com/esp32-s3-reverse-tft-feather/arduino-ide-setup-2).
+1. Install the Arduino IDE and set it up for this specific board per [Adafruit's instructions](https://learn.adafruit.com/esp32-s3-reverse-tft-feather/arduino-ide-setup-2).
 2. Open `software/Arduino/Arduino.ino` and install the following libraries. Install dependencies if prompted.
    1. "Adafruit GFX Library" by Adafruit
    2. "Adafruit ST7735 and ST7789 Library" by Adafruit
    3. "AnimatedGIF" by Larry Bank
 3. Connect the board to your computer via a USB C cable.
-4. Using a paperclip, press and hold D0. While holding D0, press the Reset button, then release D0. When holding the board with the 3D printed button to the right of the screen, D0 is the top-left pinhole for a paperclip.
+4. Using a paperclip, press and hold D0 (top-left pinhole on the board when viewed with the USB port on the left). While holding D0, press the Reset button, then release D0.
 5. Connect to the board in the Arduino IDE.
 6. Compile and upload the sketch. Once uploaded, press the Reset button; this board doesn't auto-reset on upload in certain circumstances.
 
