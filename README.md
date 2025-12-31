@@ -141,7 +141,7 @@ The physical 3D printed button presses the Reset button on the Feather. This wil
 
 * If the board is off (sleeping), it will wake up and start playing a GIF.
 * If a GIF is already playing, it will reset the board and play a GIF.
-* It will enter USB mode to load files without the need to access the microSD card physically (see below).
+* Only when D2 is being held down, it will enter USB mode to load files without the need to access the microSD card physically (see below).
 
 The battery should last a long time, but it's not a good idea to let it discharge too deeply. Charge the board with a USB C cable periodically.
 
@@ -171,7 +171,7 @@ The more convenient way is by a USB cable, but it's much slower. To do this:
 * Use a paperclip to hold down the D2 button. When viewed with the reset button on the right, this is the bottom-left pinhole.
 * While holding down D2, press reset, then release D2.
 
-This reboots the board into USB loading mode, and a message on the screen states as such. A new drive will appear on your computer when connected by USB. The name will be the same as whatever the SD card was named when you formatted it. You can now manage files on the drive, but transfer speeds will be much slower vs. directly accessing the SD card through a reader.
+This reboots the board into USB mass storage mode with a message appearing on the screen stating that USB is connected. A new drive will appear on your computer when connected by USB. The name will be the same as whatever the SD card was named when you formatted it. You can now manage files on the drive, but transfer speeds will be much slower vs. directly accessing the SD card through a reader.
 
 Once you're done managing the files, eject the drive from your computer, then press the Reset button.
 
