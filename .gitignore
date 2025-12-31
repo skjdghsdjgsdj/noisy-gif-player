@@ -208,4 +208,4 @@ __marimo__/
 # Other crap
 .DS_Store
 .idea
-Ignore*.swp
+*.swp
