@@ -63,7 +63,7 @@ At least one GIF must be loaded onto the SD card for the project to function. Th
 
 First, prepare your environment. This only needs to be done once:
 
-1. In a terminal, `cd` to the project's directory and run `chmod +x convert.sh` to make the conversion script executable.
+1. In a terminal, `cd` to the project's directory and the `software/server` directory, then run `chmod +x convert.sh` to make the conversion script executable.
 2. Format your SD card as FAT32.
 3. Create two directories in the root: `gifs` and `wavs`.
 
@@ -71,7 +71,7 @@ Now, convert a video into a compatible GIF and WAV format:
 
 1. Download a video to your computer that you want to load. Pick a video that's only a few seconds long because longer ones might drift out of audio sync. Let's assume it's called `test.mp4` and you stored it in the same directory as this project.
 2. Open a terminal and `cd` to the project's directory.
-3. Run `./convert.sh test.mp4`. This outputs `test.gif` and test.wav in the same directory.
+3. Run `./convert.sh test.mp4`. This outputs `test.gif` and the `software/server` directory and test.wav in the same directory.
 4. Copy `test.gif` to `gifs/` and `test.wav` to `wavs/`.
 
 The resulting SD card structure should look like:
@@ -188,6 +188,13 @@ The more convenient way is by a USB cable, but transfer speeds are much slower t
 This reboots the board into USB mass storage mode with a message appearing on the screen stating that USB is connected. A new drive will appear on your computer when connected by USB. The name will be the same as whatever the SD card was named when you formatted it. Once you're done managing the files, eject the drive from your computer, then press the Reset button.
 
 All the GIFs and WAVs you load must be created using the `convert.sh` script! Don't use GIFs or WAVs you find on the internet because they will not likely be compatible with these specs. Always process all your files through `convert.sh`, even if the source itself is a GIF, to be sure it's compatible with the project.
+
+If you want a web interface for the MP4 to GIF/WAV conversion, you'll need a Python installation. These instructions assume you have some Python knowledge.
+
+1. Open a terminal and `cd` to the project's `software/server` directory.
+2. Set up a Python virtual environment with `python3 -m venv venv` then activate it with `source venv/bin/activate`.
+3. Install the necessary libraries with `pip3 install -r requirements.txt`.
+4. Run the server: for testing's sake, use `python3 app.py`, or for "production" use (well, just not your own computer), run `chmod +x start.sh` to make the startup script executable, then launch it with `./start.sh`.
 
 ### About GIF creation
 

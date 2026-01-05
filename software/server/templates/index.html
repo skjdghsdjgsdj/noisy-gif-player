@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video to GIF/WAV Converter</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .upload-area {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .upload-area:hover { background: #f8f9ff; }
+        .upload-area.dragover { background: #e8eaff; border-color: #764ba2; }
+        input[type="file"] { display: none; }
+        .file-info {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 8px;
+            display: none;
+        }
+        .file-info.show { display: block; }
+        .options {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9ff;
+            border-radius: 8px;
+            display: none;
+        }
+        .options.show { display: block; }
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .checkbox-wrapper input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+        .checkbox-wrapper label {
+            cursor: pointer;
+            user-select: none;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background: #764ba2; }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .spinner-container {
+            margin: 20px 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        .spinner-container.show { display: flex; }
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #f0f0f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .spinner-message {
+            color: #667eea;
+            font-weight: 500;
+        }
+        .downloads {
+            display: none;
+            flex-direction: row;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .downloads.show { display: flex; }
+        .downloads a {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: transform 0.2s;
+        }
+        .downloads a:hover { transform: translateY(-2px); }
+        .downloads .gif-btn {
+            background: #48bb78;
+            color: white;
+        }
+        .downloads .wav-btn {
+            background: #4299e1;
+            color: white;
+        }
+        .download-notice {
+            margin-top: 15px;
+            padding: 12px;
+            background: #fef5e7;
+            color: #856404;
+            border-radius: 8px;
+            text-align: center;
+            font-size: 14px;
+            display: none;
+        }
+        .download-notice.show { display: block; }
+        .error {
+            padding: 15px;
+            background: #fed7d7;
+            color: #c53030;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+        .error.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎬 Video to GIF/WAV</h1>
+
+        <div class="upload-area" id="uploadArea">
+            <p>📁 Click or drag video/GIF file here</p>
+            <p style="font-size: 12px; color: #666; margin-top: 10px;">
+                Supported: MP4, WebM, GIF, M4V, MOV, 3GP
+            </p>
+        </div>
+
+        <input type="file" id="fileInput" accept=".mp4,.webm,.gif,.m4v,.mov,.3gp,video/*">
+
+        <div class="file-info" id="fileInfo">
+            <strong>Selected:</strong> <span id="fileName"></span>
+        </div>
+
+        <div class="options" id="options">
+            <div class="checkbox-wrapper">
+                <input type="checkbox" id="includeSoundCheckbox" checked>
+                <label for="includeSoundCheckbox">Include sound</label>
+            </div>
+        </div>
+
+        <button id="convertBtn" disabled>Convert</button>
+
+        <div class="spinner-container" id="spinnerContainer">
+            <div class="spinner"></div>
+            <span class="spinner-message">Conversion in progress</span>
+        </div>
+
+        <div class="downloads" id="downloads">
+            <a href="#" class="gif-btn" id="gifBtn">📥 Download GIF</a>
+            <a href="#" class="wav-btn" id="wavBtn" style="display:none;">📥 Download WAV</a>
+        </div>
+
+        <div class="download-notice" id="downloadNotice">
+            ⏱️ Download links available for the next 30 minutes
+        </div>
+
+        <div class="error" id="error"></div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const options = document.getElementById('options');
+        const includeSoundCheckbox = document.getElementById('includeSoundCheckbox');
+        const convertBtn = document.getElementById('convertBtn');
+        const spinnerContainer = document.getElementById('spinnerContainer');
+        const downloads = document.getElementById('downloads');
+        const gifBtn = document.getElementById('gifBtn');
+        const wavBtn = document.getElementById('wavBtn');
+        const downloadNotice = document.getElementById('downloadNotice');
+        const errorDiv = document.getElementById('error');
+
+        let selectedFile = null;
+
+        // Click to upload
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileSelect(files[0]);
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            // Check file size before allowing upload (1GB = 1073741824 bytes)
+            const maxSize = 1024 * 1024 * 1024; // 1GB in bytes
+            if (file.size > maxSize) {
+                errorDiv.textContent = 'File too large. Maximum size is 1GB';
+                errorDiv.classList.add('show');
+                fileInfo.classList.remove('show');
+                options.classList.remove('show');
+                convertBtn.disabled = true;
+                selectedFile = null;
+                return;
+            }
+
+            selectedFile = file;
+            fileName.textContent = file.name;
+            fileInfo.classList.add('show');
+            options.classList.add('show');
+            convertBtn.disabled = false;
+            downloads.classList.remove('show');
+            downloadNotice.classList.remove('show');
+            errorDiv.classList.remove('show');
+        }
+
+        convertBtn.addEventListener('click', async () => {
+            if (!selectedFile) return;
+
+            convertBtn.disabled = true;
+            spinnerContainer.classList.add('show');
+            errorDiv.classList.remove('show');
+            downloads.classList.remove('show');
+            downloadNotice.classList.remove('show');
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('include_sound', includeSoundCheckbox.checked ? 'true' : 'false');
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Upload failed');
+                }
+
+                // Success - show download links
+                const jobId = data.job_id;
+                const hasSound = data.has_sound;
+
+                gifBtn.href = `/download/${jobId}/gif`;
+
+                if (hasSound) {
+                    wavBtn.href = `/download/${jobId}/wav`;
+                    wavBtn.style.display = 'block';
+                } else {
+                    wavBtn.style.display = 'none';
+                }
+
+                downloads.classList.add('show');
+                downloadNotice.classList.add('show');
+
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.classList.add('show');
+            } finally {
+                spinnerContainer.classList.remove('show');
+                convertBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
