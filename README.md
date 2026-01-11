@@ -33,6 +33,7 @@ You need these parts:
 | [Mini oval speaker](https://www.adafruit.com/product/3923)                     | An itty bitty speaker                  | $1.95       |
 | [Female headers for Feathers](https://www.adafruit.com/product/2886)           | Physical assembly                      | $0.95       |
 | [400mAH battery for Feathers](https://www.adafruit.com/product/3898)           | The battery                            | $6.95       |
+| **Total**                                                                      |                                        | **$44.25**  |
 
 You'll need these supplies:
 
