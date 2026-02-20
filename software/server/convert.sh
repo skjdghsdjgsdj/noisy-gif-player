@@ -4,10 +4,11 @@
 
 # Usage: ./convert.sh input.mp4 [--fps FPS] [--rotation DEGREES]
 
-if [ $# -lt 1 ] || [ $# -gt 5 ]; then
-  echo "Usage: $0 input.mp4 [--fps FPS] [--rotation DEGREES]" >&2
+if [ $# -lt 1 ] || [ $# -gt 9 ]; then
+  echo "Usage: $0 input.mp4 [--fps FPS] [--rotation DEGREES] [--start TIME] [--end TIME]" >&2
   echo "  FPS: 1-30 (default: 10)" >&2
   echo "  Rotation: 0,90,180,270 (default: 0)" >&2
+  echo "  Start/end time: any ffmpeg time format (e.g. 12.5, 00:00:12.5)" >&2
   exit 1
 fi
 
@@ -27,6 +28,8 @@ fps=10
 rotation=0
 width=240
 height=135
+start_time=""
+end_time=""
 
 # Parse arguments
 shift
@@ -50,6 +53,25 @@ while [ $# -gt 0 ]; do
       rotation="$1"
       shift
       ;;
+    --start)
+      shift
+      if [ $# -eq 0 ]; then
+        echo "Error: --start requires a time value" >&2
+        exit 1
+      fi
+      start_time="$1"
+      shift
+      ;;
+    --end)
+      shift
+      if [ $# -eq 0 ]; then
+        echo "Error: --end requires a time value" >&2
+        exit 1
+      fi
+      end_time="$1"
+      shift
+      ;;
+
     *)
       echo "Error: Unknown argument '$1'" >&2
       exit 1
@@ -79,13 +101,23 @@ case "$rotation" in
     ;;
 esac
 
+# Build common ffmpeg seek args (-ss/-to accept fractional seconds, hh:mm:ss.xxx, etc.)
+ffmpeg_seek_args=()
+if [ -n "$start_time" ]; then
+  ffmpeg_seek_args+=("-ss" "$start_time")
+fi
+if [ -n "$end_time" ]; then
+  ffmpeg_seek_args+=("-to" "$end_time")
+fi
+
+safe_base=$(echo "${input%.*}" | sed 's/[^a-zA-Z0-9._-]/_/g')
 base="${input%.*}"
 gif_output="${base}.gif"
 wav_output="${base}.wav"
 palette="${base}_palette.png"
 
 echo "Converting '$input' to GIF and WAV..."
-echo "  FPS: $fps, Rotation: ${rotation}°, Resolution: ${width}x${height}"
+echo " FPS: $fps, Rotation: ${rotation}°, Resolution: ${width}x${height}, Start: ${start_time:-start}, End: ${end_time:-end}"
 
 # Build filter chains
 palette_filters="fps=$fps"
@@ -100,7 +132,7 @@ gif_filters+=",pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2:black"
 
 # Generate GIF palette (first pass, from ALL frames)
 # Use stats_mode=full so the palette represents the whole animation, not just the first frame. [web:67]
-if ! ffmpeg -v warning -i "$input" \
+if ! ffmpeg -v warning "${ffmpeg_seek_args[@]}" -i "$input" -update 1 -frames:v 1 \
   -vf "${palette_filters},palettegen=max_colors=64:stats_mode=full:reserve_transparent=1" \
   -y "$palette"; then
   echo "Error: Palette generation failed" >&2
@@ -108,7 +140,7 @@ if ! ffmpeg -v warning -i "$input" \
 fi
 
 # Create GIF (second pass)
-if ! ffmpeg -v warning -i "$input" -i "$palette" \
+if ! ffmpeg -v warning "${ffmpeg_seek_args[@]}" -i "$input" -i "$palette" \
   -filter_complex "${gif_filters}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" \
   -loop 0 "$gif_output" -y; then
   echo "Error: GIF creation failed" >&2
@@ -117,7 +149,8 @@ if ! ffmpeg -v warning -i "$input" -i "$palette" \
 fi
 
 # Create WAV - 16 kHz sample rate (unchanged)
-if ! ffmpeg -v warning -i "$input" -ac 1 -ar 16000 -sample_fmt s16 -y "$wav_output"; then
+if ! ffmpeg -v warning "${ffmpeg_seek_args[@]}" -i "$input" \
+  -ac 1 -ar 16000 -sample_fmt s16 -y "$wav_output"; then
   echo "Error: WAV creation failed" >&2
   rm -f "$palette" "$gif_output"
   exit 1
