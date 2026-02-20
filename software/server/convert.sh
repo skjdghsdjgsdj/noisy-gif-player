@@ -114,7 +114,8 @@ safe_base=$(echo "${input%.*}" | sed 's/[^a-zA-Z0-9._-]/_/g')
 base="${input%.*}"
 gif_output="${base}.gif"
 wav_output="${base}.wav"
-palette="${base}_palette.png"
+palette="${TMPDIR-/tmp}palette.png"
+trap "rm -f '$palette'" EXIT
 
 echo "Converting '$input' to GIF and WAV..."
 echo " FPS: $fps, Rotation: ${rotation}°, Resolution: ${width}x${height}, Start: ${start_time:-start}, End: ${end_time:-end}"
@@ -144,7 +145,6 @@ if ! ffmpeg -v warning "${ffmpeg_seek_args[@]}" -i "$input" -i "$palette" \
   -filter_complex "${gif_filters}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" \
   -loop 0 "$gif_output" -y; then
   echo "Error: GIF creation failed" >&2
-  rm -f "$palette"
   exit 1
 fi
 
@@ -152,12 +152,8 @@ fi
 if ! ffmpeg -v warning "${ffmpeg_seek_args[@]}" -i "$input" \
   -ac 1 -ar 16000 -sample_fmt s16 -y "$wav_output"; then
   echo "Error: WAV creation failed" >&2
-  rm -f "$palette" "$gif_output"
   exit 1
 fi
-
-# Cleanup palette
-rm -f "$palette"
 
 echo "Done! Created:"
 echo "  GIF: $gif_output (${width}x${height}, ${fps}fps, ${rotation}° rotation, CircuitPython/AnimatedGIF friendly)"
