@@ -167,7 +167,8 @@ The male headers that come with the boards may not match the number of pins. You
 4. Using a paperclip, press and hold D0 (top-left pinhole on the board when viewed with the USB port on the left). While holding D0, press the Reset button, then release D0.
 5. Connect to the board in the Arduino IDE.
 6. Select **Tools** → **Partition Scheme** and "Huge APP (3MB No OTA/1MB SPIFFS)" or a similar entry. This prevents a bootloader screen from appearing if you press the Reset button twice with a specific timing.
-7. Compile and upload the sketch.
+7. Select **Tools** → **USB CDC on Boot** and set it to "Disabled." If you don't do this, the USB loading method of files to the SD card may not work.
+8. Compile and upload the sketch.
 
 Press the Reset button. Your GIF and WAV should play! Once the GIF is done, the screen fades off and the board sleeps. Pressing the Reset button wakes it back up and a GIF/WAV play again.
 
