@@ -15,11 +15,12 @@ You need:
 * Some soldering experience
 * A 3D printer
 * A computer:
-  * Running macOS or Linux<sup>*</sup>
+  * Running macOS or Linux
   * With a microSD card reader
   * With FFmpeg installed
 
-<sup>*</sup> This is because the script that creates compatible GIFs/WAVs is written in Bash. On Windows, you'll need to port it to PowerShell, like `convert.ps1`. PRs welcome!
+> [!NOTE]
+> Linux/macOS is needed because the script that creates compatible GIFs/WAVs is written in Bash. On Windows, you'll need to port it to PowerShell, like `convert.ps1`. PRs welcome!
 
 ### Step 1: Buy parts
 
@@ -60,7 +61,8 @@ If your printer doesn't bridge well, also add supports to the USB C hole in `Cas
 
 The repository includes a script called `convert.sh` that runs FFmpeg with very specific arguments to make GIFs and WAVs compatible with the board.
 
-At least one GIF must be loaded onto the SD card for the project to function. The GIF follows a very specific format. A random GIF you find on the internet is unlikely to work. Here's how to make a compatible GIF and WAV.
+> ![IMPORTANT]
+> At least one GIF must be loaded onto the SD card for the project to function. Each GIF must follow a very specific format. A random GIF you find on the internet is unlikely to work. Here's how to make a compatible GIF and WAV.
 
 First, prepare your environment. This only needs to be done once:
 
@@ -87,7 +89,8 @@ SD card root
 
 ### Step 4: Physical assembly
 
-Read these instructions fully before actually starting! Everything is a very tight fit in the enclosure and the details matter.
+> [!IMPORTANT]
+> Read these instructions fully before actually starting! Everything is a very tight fit in the enclosure and the details matter.
 
 Here's a logical diagram of how the components are connected, for reference. In particular, note the following:
 
@@ -176,7 +179,7 @@ The battery should last a long time, but it's not a good idea to let it discharg
 
 ### Loading more GIFs
 
-There are two ways to load a GIF and WAV.
+There are two ways to load GIFs and WAVs.
 
 The fastest way for a lot of GIFs and WAVs is directly via the SD card. Consider this option when you first build the project. Once you've built the project, it can be a pain to take it apart to get the SD card out.
 
@@ -190,16 +193,18 @@ This reboots the board into USB mass storage mode with a message appearing on th
 
 All the GIFs and WAVs you load must be created using the `convert.sh` script! Don't use GIFs or WAVs you find on the internet because they will not likely be compatible with these specs. Always process all your files through `convert.sh`, even if the source itself is a GIF, to be sure it's compatible with the project.
 
-If you want a web interface for the MP4 to GIF/WAV conversion, you'll need a Python installation. These instructions assume you have some Python knowledge.
+The conversion script can also be invoked with a friendly web interface. If you want to run that, you'll need a Python installation. These instructions assume you have some Python knowledge.
 
 1. Open a terminal and `cd` to the project's `software/server` directory.
 2. Set up a Python virtual environment with `python3 -m venv venv` then activate it with `source venv/bin/activate`.
 3. Install the necessary libraries with `pip3 install -r requirements.txt`.
 4. Run the server: for testing's sake, use `python3 app.py`, or for "production" use (well, just not your own computer), run `chmod +x start.sh` to make the startup script executable, then launch it with `./start.sh`.
+5. Open a browser to `http://localhost:5000/`.
 
 ### About GIF creation
 
-The WAV for a GIF is optional, so if your source file has no sound, or you just don't want sound, delete the resulting `.wav` file.
+> [!TIP]
+> The WAV for a GIF is optional, so if your source file has no sound, or you just don't want sound, delete the resulting `.wav` file.
 
 `convert.sh` does several things:
 
@@ -207,6 +212,8 @@ The WAV for a GIF is optional, so if your source file has no sound, or you just 
 * Forces the resolution to exactly 240x135, which is the native resolution of the screen. GIFs are letterboxed or pillarboxed as necessary to keep the aspect ratio and to match this resolution.
 * Forces a specific color palette
 * Outputs a WAV file at 16 KHz mono
+
+You can pass `--start` and/or `--end` arguments to the conversion script with timecodes to crop a video to a certain timespan if you don't want to convert the entire thing.
 
 ## Known issues
 
