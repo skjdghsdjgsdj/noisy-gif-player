@@ -1,8 +1,13 @@
 #include "GifRenderer.h"
+#include "I2SWavPlayer.h"
 #include <SD_MMC.h>
+#include "esp_timer.h"
 
 GifRenderer::GifRenderer()
-  : tft(NULL) {
+  : tft(NULL), decodeBuffer(0), skipFrame(false),
+    displayQueue(NULL), displayWriterHandle(NULL) {
+  bufferFree[0] = NULL;
+  bufferFree[1] = NULL;
 }
 
 GifRenderer &GifRenderer::instance() {
@@ -14,6 +19,12 @@ void GifRenderer::begin(Adafruit_ST7789 &display) {
   tft = &display;
   gif.begin(LITTLE_ENDIAN_PIXELS);
   clearFrameBuffer();
+
+  displayQueue  = xQueueCreate(1, sizeof(int));
+  bufferFree[0] = xSemaphoreCreateBinary();
+  bufferFree[1] = xSemaphoreCreateBinary();
+  xSemaphoreGive(bufferFree[0]);
+  xSemaphoreGive(bufferFree[1]);
 }
 
 bool GifRenderer::playGif(const String &gifPath) {
@@ -28,11 +39,76 @@ bool GifRenderer::playGif(const String &gifPath) {
     return false;
   }
 
-  bool playing = true;
+  startDisplayWriterTask();
+
+  I2SWavPlayer &player = I2SWavPlayer::instance();
+  bool haveAudio = player.isActive();
+
+  // Use the audio render start time as the GIF timeline origin so that
+  // frame 0 is displayed exactly when the first audio sample is heard,
+  // eliminating the fixed phase offset caused by I2S DMA pipeline latency.
+  // Without audio, fall back to the current wall clock.
+  uint64_t startUs     = haveAudio ? player.getAudioRenderStartUs()
+                                   : esp_timer_get_time();
+  uint64_t nextFrameUs = startUs;  // deadline for frame 0
+
+  int  lastPosted    = -1;
+  bool playing       = true;
+  bool dropNextFrame = false;
+
   while (playing) {
-    playing = gif.playFrame(true, NULL);
+    // Sleep until this frame's deadline, overlapping with the DisplayWriter's
+    // SPI transfer for the previous frame. If we're already behind, skip sleep.
+    int64_t sleepUs = (int64_t)nextFrameUs - (int64_t)esp_timer_get_time();
+    if (sleepUs >= 1000) {
+      vTaskDelay(pdMS_TO_TICKS(sleepUs / 1000));
+    } else if (sleepUs > 0) {
+      esp_rom_delay_us((uint32_t)sleepUs);
+    }
+
+    xSemaphoreTake(bufferFree[decodeBuffer], portMAX_DELAY);
+
+    // Carry forward the previous frame as the background for transparent pixels.
+    // Safe: DisplayWriter may still be reading frameBuffer[decodeBuffer ^ 1] via SPI
+    // DMA, but we only read it here too — concurrent reads have no data race.
+    memcpy(frameBuffer[decodeBuffer], frameBuffer[decodeBuffer ^ 1],
+           sizeof(frameBuffer[0]));
+
+    // skipFrame is read inside flushFrameIfLastLine() (called from gif.playFrame).
+    // When true, that callback releases bufferFree[decodeBuffer] itself instead of
+    // posting to the display queue, so the DisplayWriter never sees this frame.
+    skipFrame = dropNextFrame;
+
+    int frameDelayMs = 0;
+    playing = gif.playFrame(false, &frameDelayMs);
+    nextFrameUs += (uint64_t)frameDelayMs * 1000ULL;
+
+    if (!skipFrame) {
+      lastPosted = decodeBuffer;
+    }
+
+    // After every frame, compare heard audio position to the GIF timeline.
+    // If audio has overtaken the end of this frame, mark the next frame for
+    // dropping. This self-corrects any drift or decode-time spikes without
+    // touching audio at all.
+    dropNextFrame = false;
+    if (haveAudio && frameDelayMs > 0 && player.isActive()) {
+      int64_t audioUs = player.getAudioPositionUs();
+      int64_t videoUs = (int64_t)(nextFrameUs - startUs);  // GIF timeline pos of next frame start
+      if (audioUs >= 0) {
+        dropNextFrame = (audioUs > videoUs);
+      }
+    }
+
+    decodeBuffer ^= 1;
   }
 
+  if (lastPosted != -1) {
+    waitForLastFrame(lastPosted);
+  }
+
+  stopDisplayWriterTask();
+  gif.close();
   return true;
 }
 
@@ -93,7 +169,7 @@ bool GifRenderer::clipAndPrepareLine(
   }
 
   pixels = pDraw->pPixels;
-  lineBase = &frameBuffer[y * DISPLAY_WIDTH + pDraw->iX];
+  lineBase = &frameBuffer[decodeBuffer][y * DISPLAY_WIDTH + pDraw->iX];
   return true;
 }
 
@@ -187,11 +263,12 @@ void GifRenderer::flushFrameIfLastLine(GIFDRAW *pDraw) {
   if (pDraw->y != pDraw->iHeight - 1) {
     return;
   }
-
-  tft->startWrite();
-  tft->setAddrWindow(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
-  tft->writePixels(frameBuffer, FRAMEBUFFER_SIZE, false, false);
-  tft->endWrite();
+  if (skipFrame) {
+    // Don't display this frame; release the buffer so the next frame can use it.
+    xSemaphoreGive(bufferFree[decodeBuffer]);
+  } else {
+    xQueueSend(displayQueue, &decodeBuffer, portMAX_DELAY);
+  }
 }
 
 void GifRenderer::draw(GIFDRAW *pDraw) {
@@ -218,11 +295,53 @@ void GifRenderer::draw(GIFDRAW *pDraw) {
 }
 
 void GifRenderer::clearFrameBuffer() {
-  size_t i = 0;
-  while (i < FRAMEBUFFER_SIZE) {
-    frameBuffer[i] = 0;
-    i++;
+  memset(frameBuffer, 0, sizeof(frameBuffer));
+}
+
+void GifRenderer::displayWriterTask() {
+  int bufIdx;
+  while (true) {
+    if (xQueueReceive(displayQueue, &bufIdx, portMAX_DELAY) != pdTRUE) {
+      vTaskDelete(NULL);
+      return;
+    }
+    if (bufIdx == -1) {
+      vTaskDelete(NULL);
+      return;
+    }
+    tft->startWrite();
+    tft->setAddrWindow(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
+    tft->writePixels(frameBuffer[bufIdx], FRAMEBUFFER_SIZE, false, false);
+    tft->endWrite();
+    xSemaphoreGive(bufferFree[bufIdx]);
   }
+}
+
+void GifRenderer::displayWriterTaskEntry(void *param) {
+  static_cast<GifRenderer *>(param)->displayWriterTask();
+}
+
+void GifRenderer::startDisplayWriterTask() {
+  decodeBuffer = 0;
+  xTaskCreatePinnedToCore(
+    displayWriterTaskEntry, "DisplayWriter",
+    4096, this,
+    2,
+    &displayWriterHandle,
+    1
+  );
+}
+
+void GifRenderer::stopDisplayWriterTask() {
+  if (displayWriterHandle == NULL) return;
+  int sentinel = -1;
+  xQueueSend(displayQueue, &sentinel, portMAX_DELAY);
+  displayWriterHandle = NULL;
+}
+
+void GifRenderer::waitForLastFrame(int lastPosted) {
+  xSemaphoreTake(bufferFree[lastPosted], portMAX_DELAY);
+  xSemaphoreGive(bufferFree[lastPosted]);
 }
 
 // Free-function callbacks

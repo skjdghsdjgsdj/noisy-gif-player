@@ -50,8 +50,8 @@ void USBMassStorageMode::showScreen(Adafruit_ST7789 &tft) {
 }
 
 void USBMassStorageMode::configureMSC() {
-  msc.vendorID("Adafruit");
-  msc.productID("ESP32-S3 SD");
+  msc.vendorID("ESP32");
+  msc.productID("USB_MSC");
   msc.productRevision("1.0");
 
   msc.onRead(onReadThunk);
@@ -64,18 +64,25 @@ void USBMassStorageMode::configureMSC() {
 
 int32_t USBMassStorageMode::onReadThunk(uint32_t lba, uint32_t offset, void *buffer, uint32_t bufsize) {
   (void)offset;
-  return SDCard::instance().rawRead(lba, buffer, bufsize);
-}
+  uint8_t* buf = (uint8_t*)buffer;
+  
+  for (uint32_t i = 0; i < bufsize / 512; i++) {
+    if (!SD_MMC.readRAW(buf + (i * 512), lba + i)) {
+      return -1;
+    }
+  }
+  return bufsize;}
 
 int32_t USBMassStorageMode::onWriteThunk(uint32_t lba, uint32_t offset, uint8_t *buffer, uint32_t bufsize) {
   (void)offset;
-  return SDCard::instance().rawWrite(lba, buffer, bufsize);
-}
+  for (uint32_t i = 0; i < bufsize / 512; i++) {
+    if (!SD_MMC.writeRAW(buffer + (i * 512), lba + i)) {
+      return -1;
+    }
+  }
+  return bufsize;}
 
 bool USBMassStorageMode::onStartStopThunk(uint8_t power_condition, bool start, bool load_eject) {
-  (void)power_condition;
-  (void)start;
-  (void)load_eject;
   return true;
 }
 
