@@ -209,7 +209,7 @@ The conversion script can also be invoked with a friendly web interface. If you 
 
 `convert.sh` does several things:
 
-* Forces the FPS to 15 by default
+* Forces the FPS to 15 by default, although 30 fps does work in my testing
 * Forces the resolution to exactly 240x135, which is the native resolution of the screen. GIFs are letterboxed or pillarboxed as necessary to keep the aspect ratio and to match this resolution.
 * Forces a specific color palette
 * Outputs a WAV file at 16 KHz mono
@@ -223,4 +223,3 @@ You can pass `--start` and/or `--end` arguments to the conversion script with ti
 * **The USB transfer speed is super slow.** That's a limitation of the board. I don't think there's any way to make it faster. If you want to transfer a lot of data, take out the SD card and put it in a card reader.
 * **If I load a lot of GIFs, some don't show up in rotation.** The code artificially limits the list of GIFs to 64, but you can increase this.
 * **There's no low battery warning.** Yes I should add that. There's an onboard I2C battery monitor that should work for this purpose; I just haven't programmed that in yet.
-* **Audio drifts out of sync with longer GIFs.** Probably, yeah. There's no code to sync the two and instead the code relies on the GIF playing back smoothly and assumes the audio does the same.
