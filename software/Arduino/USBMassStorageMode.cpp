@@ -64,23 +64,13 @@ void USBMassStorageMode::configureMSC() {
 
 int32_t USBMassStorageMode::onReadThunk(uint32_t lba, uint32_t offset, void *buffer, uint32_t bufsize) {
   (void)offset;
-  uint8_t* buf = (uint8_t*)buffer;
-  
-  for (uint32_t i = 0; i < bufsize / 512; i++) {
-    if (!SD_MMC.readRAW(buf + (i * 512), lba + i)) {
-      return -1;
-    }
-  }
-  return bufsize;}
+  return SDCard::instance().rawRead(lba, buffer, bufsize);
+}
 
 int32_t USBMassStorageMode::onWriteThunk(uint32_t lba, uint32_t offset, uint8_t *buffer, uint32_t bufsize) {
   (void)offset;
-  for (uint32_t i = 0; i < bufsize / 512; i++) {
-    if (!SD_MMC.writeRAW(buffer + (i * 512), lba + i)) {
-      return -1;
-    }
-  }
-  return bufsize;}
+  return SDCard::instance().rawWrite(lba, buffer, bufsize);
+}
 
 bool USBMassStorageMode::onStartStopThunk(uint8_t power_condition, bool start, bool load_eject) {
   return true;
