@@ -9,7 +9,7 @@ public:
   void loopOnce();
 
 private:
-  void enterDeepSleep();      // High-level entry point for deep sleep
+  [[noreturn]] void enterDeepSleep();      // High-level entry point for deep sleep
 
   void setupPinsAndPower();
   void setupDisplay();
@@ -19,6 +19,6 @@ private:
 
   void fadeBacklightOff();
   void powerDownPeripherals();
-  void startESPDeepSleep();
+  [[noreturn]] void startESPDeepSleep();
 };
 

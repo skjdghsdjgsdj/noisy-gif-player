@@ -51,13 +51,13 @@ void Application::powerDownPeripherals() {
   SDCard::instance().end();
 }
 
-void Application::startESPDeepSleep() {
+[[noreturn]] void Application::startESPDeepSleep() {
   esp_sleep_pd_config(ESP_PD_DOMAIN_RTC_PERIPH, ESP_PD_OPTION_OFF);
   esp_sleep_pd_config(ESP_PD_DOMAIN_VDDSDIO, ESP_PD_OPTION_OFF);
   esp_deep_sleep_start();
 }
 
-void Application::enterDeepSleep() {
+[[noreturn]] void Application::enterDeepSleep() {
   fadeBacklightOff();
   powerDownPeripherals();
   startESPDeepSleep();
