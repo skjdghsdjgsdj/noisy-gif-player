@@ -11,10 +11,10 @@ GifSelector &GifSelector::instance() {
   return inst;
 }
 
-bool GifSelector::collectCandidates(size_t &count) {
-  count = 0;
-  enumerateGifCandidates(candidates, MAX_GIFS, count);
-  return (count > 0);
+bool GifSelector::collectCandidates() {
+  candidates.clear();
+  enumerateGifCandidates(candidates);
+  return !candidates.empty();
 }
 
 File GifSelector::openGifDirectory() {
@@ -25,36 +25,22 @@ File GifSelector::openGifDirectory() {
   return dir;
 }
 
-void GifSelector::enumerateGifCandidates(
-  String outCandidates[],
-  size_t maxCount,
-  size_t &outCount
-) {
-  outCount = 0;
-
+void GifSelector::enumerateGifCandidates(std::vector<String> &outCandidates) {
   File dir = openGifDirectory();
   if (!dir) {
     return;
   }
 
   File f = dir.openNextFile();
-  while (f && outCount < maxCount) {
-    tryAddGifCandidate(outCandidates, maxCount, outCount, f);
+  while (f) {
+    tryAddGifCandidate(outCandidates, f);
     f = dir.openNextFile();
   }
 
   dir.close();
 }
 
-void GifSelector::tryAddGifCandidate(
-  String outCandidates[],
-  size_t maxCount,
-  size_t &outCount,
-  File &f
-) {
-  if (outCount >= maxCount) {
-    return;
-  }
+void GifSelector::tryAddGifCandidate(std::vector<String> &outCandidates, File &f) {
   if (f.isDirectory()) {
     return;
   }
@@ -66,12 +52,12 @@ void GifSelector::tryAddGifCandidate(
     return;
   }
 
-  outCandidates[outCount] = path;
-  outCount++;
+  outCandidates.push_back(path);
 }
 
 String GifSelector::normalizeGifPath(const String &rawName) {
-  if (rawName.startsWith(GIF_DIR)) {
+  String gifDirSlash = String(GIF_DIR) + "/";
+  if (rawName.startsWith(gifDirSlash)) {
     return rawName;
   }
 
@@ -115,10 +101,11 @@ String GifSelector::buildWavPathFromGif(const String &gifPath) {
 }
 
 String GifSelector::chooseGifPathWithPreference(
-  String list[],
-  size_t count,
+  const std::vector<String> &list,
   const String &lastGifPath
 ) {
+  size_t count = list.size();
+
   if (count == 1) {
     return list[0];
   }
@@ -136,13 +123,12 @@ String GifSelector::chooseGifPathWithPreference(
 }
 
 bool GifSelector::chooseRandomGifAndWav(String &gifPath, String &wavPath) {
-  size_t count = 0;
-  if (!collectCandidates(count)) {
+  if (!collectCandidates()) {
     return false;
   }
 
   String lastGifPath = prefsManager.loadLastGifPath();
-  gifPath = chooseGifPathWithPreference(candidates, count, lastGifPath);
+  gifPath = chooseGifPathWithPreference(candidates, lastGifPath);
   wavPath = buildWavPathFromGif(gifPath);
 
   if (gifPath != lastGifPath) {
