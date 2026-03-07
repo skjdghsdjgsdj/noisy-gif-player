@@ -21,10 +21,6 @@ bool I2SWavPlayer::start(const String &wavPath) {
     return false;
   }
 
-  // Record when frame 0 audio will be heard: now + DMA pipeline drain time.
-  // I2S_DMA_BUF_LEN is in samples; each 16-bit mono sample is 2 bytes.
-  uint64_t dmaLatencyUs = (uint64_t)I2S_DMA_BUF_COUNT * I2S_DMA_BUF_LEN * 1000000ULL / sampleRate;
-  audioRenderStartUs = esp_timer_get_time() + dmaLatencyUs;
   totalBytesWritten.store(0, std::memory_order_relaxed);
 
   setupI2S(sampleRate);
@@ -39,6 +35,12 @@ bool I2SWavPlayer::start(const String &wavPath) {
     NULL,
     0
   );
+
+  // Timestamp AFTER all init so the offset correctly reflects when the first
+  // sample will be heard, not when setup began. I2S_DMA_BUF_LEN is in samples;
+  // each 16-bit mono sample is 2 bytes.
+  uint64_t dmaLatencyUs = (uint64_t)I2S_DMA_BUF_COUNT * I2S_DMA_BUF_LEN * 1000000ULL / sampleRate;
+  audioRenderStartUs = esp_timer_get_time() + dmaLatencyUs;
 
   return true;
 }

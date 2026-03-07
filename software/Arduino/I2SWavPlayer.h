@@ -33,7 +33,7 @@ private:
   static constexpr int I2S_DIN  = 39;
 
   File           wavFile;
-  volatile bool  audioActive;
+  std::atomic<bool> audioActive;
   uint32_t       sampleRate;
   uint8_t        audioBuffer[AUDIO_BUFFER_SIZE];
   // Total bytes handed to i2s_write. Written only by AudioTask; read by GifRenderer.
