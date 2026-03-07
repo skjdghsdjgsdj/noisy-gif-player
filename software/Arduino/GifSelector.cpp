@@ -145,6 +145,10 @@ bool GifSelector::chooseRandomGifAndWav(String &gifPath, String &wavPath) {
   gifPath = chooseGifPathWithPreference(candidates, count, lastGifPath);
   wavPath = buildWavPathFromGif(gifPath);
 
+  if (gifPath != lastGifPath) {
+    prefsManager.storeLastGifPath(gifPath);
+  }
+
   return true;
 }
 

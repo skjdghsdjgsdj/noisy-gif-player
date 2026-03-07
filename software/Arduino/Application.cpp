@@ -118,8 +118,6 @@ void Application::loopOnce() {
     enterDeepSleep();
   }
 
-  PreferenceManager::instance().storeLastGifPath(gifPath);
-
   I2SWavPlayer &player = I2SWavPlayer::instance();
   bool haveWav = player.start(wavPath);
 
