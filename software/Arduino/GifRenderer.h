@@ -38,6 +38,16 @@ private:
   bool              skipFrame;               // set before gif.playFrame(); read in flushFrameIfLastLine()
   bool              prevFrameWasOpaque;      // true if the last decoded frame had no transparent pixels
   bool              currentFrameHasTransparency; // reset each frame; set by draw() if any scanline is transparent
+  // Passed through displayQueue so the DisplayWriter knows which framebuffer
+  // rows were actually modified. Sending only the dirty rows reduces SPI
+  // transfer time proportionally when the GIF frame covers less than the full
+  // canvas height (which is typical with diff_mode=rectangle encoding).
+  struct DisplayFrame {
+    int bufIdx;
+    int topRow;
+    int numRows;
+  };
+
   QueueHandle_t     displayQueue;
   SemaphoreHandle_t bufferFree[2];
   TaskHandle_t      displayWriterHandle;

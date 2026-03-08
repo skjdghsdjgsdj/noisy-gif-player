@@ -24,7 +24,7 @@ void GifRenderer::begin(Adafruit_ST7789 &display) {
   gif.begin(BIG_ENDIAN_PIXELS);
   clearFrameBuffer();
 
-  displayQueue  = xQueueCreate(1, sizeof(int));
+  displayQueue  = xQueueCreate(1, sizeof(DisplayFrame));
   bufferFree[0] = xSemaphoreCreateBinary();
   bufferFree[1] = xSemaphoreCreateBinary();
   xSemaphoreGive(bufferFree[0]);
@@ -249,7 +249,14 @@ void GifRenderer::flushFrameIfLastLine(GIFDRAW *pDraw) {
     // Don't display this frame; release the buffer so the next frame can use it.
     xSemaphoreGive(bufferFree[decodeBuffer]);
   } else {
-    xQueueSend(displayQueue, &decodeBuffer, portMAX_DELAY);
+    // Compute the rows this GIF frame covers, clamped to display bounds.
+    // With diff_mode=rectangle encoding, frames often cover only a sub-region
+    // of the canvas, so the DisplayWriter only needs to transfer those rows
+    // rather than the full 240×135 framebuffer.
+    int topRow  = max(pDraw->iY, 0);
+    int botRow  = min(pDraw->iY + pDraw->iHeight - 1, DISPLAY_HEIGHT - 1);
+    DisplayFrame frame = { decodeBuffer, topRow, botRow - topRow + 1 };
+    xQueueSend(displayQueue, &frame, portMAX_DELAY);
   }
 }
 
@@ -282,21 +289,28 @@ void GifRenderer::clearFrameBuffer() {
 }
 
 void GifRenderer::displayWriterTask() {
-  int bufIdx;
+  DisplayFrame frame;
   while (true) {
-    if (xQueueReceive(displayQueue, &bufIdx, portMAX_DELAY) != pdTRUE) {
+    if (xQueueReceive(displayQueue, &frame, portMAX_DELAY) != pdTRUE) {
       vTaskDelete(NULL);
       return;
     }
-    if (bufIdx == -1) {
+    if (frame.bufIdx == -1) {
       vTaskDelete(NULL);
       return;
     }
+    // Only transfer the rows this GIF frame actually touched. For
+    // diff_mode=rectangle GIFs the frame is often smaller than the full
+    // canvas; skipping the untouched rows saves proportional SPI time.
+    // Full-width rows are contiguous in the framebuffer, so no reformatting
+    // is needed — just a narrower setAddrWindow and shorter writePixels.
+    int pixelOffset = frame.topRow * DISPLAY_WIDTH;
+    int pixelCount  = frame.numRows * DISPLAY_WIDTH;
     tft->startWrite();
-    tft->setAddrWindow(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
-    tft->writePixels(frameBuffer[bufIdx], FRAMEBUFFER_SIZE, false, true);
+    tft->setAddrWindow(0, frame.topRow, DISPLAY_WIDTH, frame.numRows);
+    tft->writePixels(&frameBuffer[frame.bufIdx][pixelOffset], pixelCount, false, true);
     tft->endWrite();
-    xSemaphoreGive(bufferFree[bufIdx]);
+    xSemaphoreGive(bufferFree[frame.bufIdx]);
   }
 }
 
@@ -317,7 +331,7 @@ void GifRenderer::startDisplayWriterTask() {
 
 void GifRenderer::stopDisplayWriterTask() {
   if (displayWriterHandle == NULL) return;
-  int sentinel = -1;
+  DisplayFrame sentinel = { -1, 0, 0 };
   xQueueSend(displayQueue, &sentinel, portMAX_DELAY);
   displayWriterHandle = NULL;
 }
