@@ -74,7 +74,7 @@ Now, convert a video into a compatible GIF and WAV format:
 
 1. Download a video to your computer that you want to load. Pick a video that's only a few seconds long because longer ones might drift out of audio sync. Let's assume it's called `test.mp4` and you stored it in the same directory as this project.
 2. Open a terminal and `cd` to the project's directory.
-3. Run `./convert.sh test.mp4`. This outputs `test.gif` and the `software/server` directory and test.wav in the same directory.
+3. Run `./convert.sh test.mp4`. This outputs `test.gif` and the `test.wav` in the same directory.
 4. Copy `test.gif` to `gifs/` and `test.wav` to `wavs/`.
 
 The resulting SD card structure should look like:
@@ -209,7 +209,7 @@ The conversion script can also be invoked with a friendly web interface. If you 
 
 `convert.sh` does several things:
 
-* Forces the FPS to 15 by default, although 30 fps does work in my testing
+* Forces the framerate to 30 fps
 * Forces the resolution to exactly 240x135, which is the native resolution of the screen. GIFs are letterboxed or pillarboxed as necessary to keep the aspect ratio and to match this resolution.
 * Forces a specific color palette
 * Outputs a WAV file at 16 KHz mono
@@ -221,5 +221,4 @@ You can pass `--start` and/or `--end` arguments to the conversion script with ti
 * **The OpenSCAD code is terrible and a lot of the math is wrong if you adjust some settings, like surface thickness.** Sure is. I needed to build this quickly so I hardcoded a _lot_ of things. I welcome any attempts to clean up or just completely redo the enclosure code.
 * **Some of the Arduino code is also terrible.** Because it is largely and shamefully AI generated for the same reason of time constraints, plus C++ not being my speciality. At least it works.
 * **The USB transfer speed is super slow.** That's a limitation of the board. I don't think there's any way to make it faster. If you want to transfer a lot of data, take out the SD card and put it in a card reader.
-* **If I load a lot of GIFs, some don't show up in rotation.** The code artificially limits the list of GIFs to 64, but you can increase this.
 * **There's no low battery warning.** Yes I should add that. There's an onboard I2C battery monitor that should work for this purpose; I just haven't programmed that in yet.

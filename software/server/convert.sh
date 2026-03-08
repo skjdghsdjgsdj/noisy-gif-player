@@ -6,7 +6,7 @@
 
 if [ $# -lt 1 ] || [ $# -gt 9 ]; then
   echo "Usage: $0 input.mp4 [--fps FPS] [--rotation DEGREES] [--start TIME] [--end TIME]" >&2
-  echo "  FPS: 1-30 (default: 10)" >&2
+  echo "  FPS: 1-30 (default: 30)" >&2
   echo "  Rotation: 0,90,180,270 (default: 0)" >&2
   echo "  Start/end time: any ffmpeg time format (e.g. 12.5, 00:00:12.5)" >&2
   exit 1
@@ -24,7 +24,7 @@ if ! command -v ffmpeg &> /dev/null; then
   exit 1
 fi
 
-fps=10
+fps=30
 rotation=0
 width=240
 height=135
