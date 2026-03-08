@@ -2,12 +2,16 @@
 #include <USB.h>
 #include "SDCard.h"
 #include "GifRenderer.h"
+#include "PreferenceManager.h"
 
 USBMassStorageMode::USBMassStorageMode()
   : msc() {
 }
 
 void USBMassStorageMode::run(Adafruit_ST7789 &tft) {
+  // SD contents may change while in MSC mode; invalidate the cached GIF list
+  // so the next boot re-enumerates rather than playing from a stale cache.
+  PreferenceManager::instance().clearCandidateList();
   showScreen(tft);
   configureMSC();
   USB.begin();

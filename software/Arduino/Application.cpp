@@ -122,6 +122,10 @@ void Application::loopOnce() {
   bool haveWav = player.start(wavPath);
 
   if (!GifRenderer::instance().playGif(gifPath)) {
+    // The chosen path may be a stale cache entry (e.g. the file was deleted).
+    // Clear the cache so the next boot re-enumerates rather than hitting the
+    // same dead entry repeatedly.
+    PreferenceManager::instance().clearCandidateList();
     enterDeepSleep();
   }
 

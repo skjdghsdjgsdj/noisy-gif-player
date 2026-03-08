@@ -13,7 +13,18 @@ GifSelector &GifSelector::instance() {
 
 bool GifSelector::collectCandidates() {
   candidates.clear();
+
+  // Fast path: use the NVS-cached list to skip the SD directory scan.
+  prefsManager.loadCandidateList(candidates);
+  if (!candidates.empty()) {
+    return true;
+  }
+
+  // Cache miss: enumerate the SD directory and persist the result.
   enumerateGifCandidates(candidates);
+  if (!candidates.empty()) {
+    prefsManager.storeCandidateList(candidates);
+  }
   return !candidates.empty();
 }
 

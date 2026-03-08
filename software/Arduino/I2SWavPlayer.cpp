@@ -6,10 +6,10 @@
 // I2S DMA configuration; users might tune these for performance.
 // Lower I2S_DMA_BUF_COUNT reduces audio pipeline latency (first-audio-heard delay =
 // I2S_DMA_BUF_COUNT * I2S_DMA_BUF_LEN / sampleRate), which controls audio/video sync.
-// With 4 buffers @ 44100 Hz the latency is ~46 ms (~1 frame at 30 fps).
+// With 2 buffers @ 16000 Hz the latency is ~32 ms (~1 frame at 30 fps).
 // Increase if you hear audio glitches on GIFs with large or complex frames.
-static constexpr int I2S_DMA_BUF_COUNT = 4;   // Number of DMA buffers for I2S
-static constexpr int I2S_DMA_BUF_LEN   = 512; // Samples per DMA buffer
+static constexpr int I2S_DMA_BUF_COUNT = 2;   // Number of DMA buffers for I2S
+static constexpr int I2S_DMA_BUF_LEN   = 256; // Samples per DMA buffer
 
 I2SWavPlayer::I2SWavPlayer()
   : audioActive(false), sampleRate(0), totalBytesWritten(0), audioRenderStartUs(0) {

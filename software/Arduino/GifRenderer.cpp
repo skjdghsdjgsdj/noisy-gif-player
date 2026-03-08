@@ -5,6 +5,7 @@
 
 GifRenderer::GifRenderer()
   : tft(NULL), decodeBuffer(0), skipFrame(false),
+    prevFrameWasOpaque(false), currentFrameHasTransparency(false),
     displayQueue(NULL), displayWriterHandle(NULL) {
   bufferFree[0] = NULL;
   bufferFree[1] = NULL;
@@ -17,7 +18,10 @@ GifRenderer &GifRenderer::instance() {
 
 void GifRenderer::begin(Adafruit_ST7789 &display) {
   tft = &display;
-  gif.begin(LITTLE_ENDIAN_PIXELS);
+  // BIG_ENDIAN_PIXELS stores palette colors in the byte order the ST7789 expects
+  // over SPI (high byte first). writePixels(..., bigEndian=true) then passes the
+  // framebuffer directly to DMA without any per-pixel byte-swap pass.
+  gif.begin(BIG_ENDIAN_PIXELS);
   clearFrameBuffer();
 
   displayQueue  = xQueueCreate(1, sizeof(int));
@@ -71,8 +75,18 @@ bool GifRenderer::playGif(const String &gifPath) {
     // Carry forward the previous frame as the background for transparent pixels.
     // Safe: DisplayWriter may still be reading frameBuffer[decodeBuffer ^ 1] via SPI
     // DMA, but we only read it here too — concurrent reads have no data race.
-    memcpy(frameBuffer[decodeBuffer], frameBuffer[decodeBuffer ^ 1],
-           sizeof(frameBuffer[0]));
+    //
+    // Skip the copy when the previous frame was fully opaque: every pixel in the
+    // decode buffer will be overwritten regardless, so copying is pure waste.
+    // For full-motion video GIFs this is almost always the case, saving a 64 KB
+    // memcpy per frame (~0.3 ms each on internal SRAM).
+    if (!prevFrameWasOpaque) {
+      memcpy(frameBuffer[decodeBuffer], frameBuffer[decodeBuffer ^ 1],
+             sizeof(frameBuffer[0]));
+    }
+
+    // Reset per-frame transparency flag; draw() sets it if any scanline is transparent.
+    currentFrameHasTransparency = false;
 
     // skipFrame is read inside flushFrameIfLastLine() (called from gif.playFrame).
     // When true, that callback releases bufferFree[decodeBuffer] itself instead of
@@ -82,6 +96,8 @@ bool GifRenderer::playGif(const String &gifPath) {
     int frameDelayMs = 0;
     playing = gif.playFrame(false, &frameDelayMs);
     nextFrameUs += (uint64_t)frameDelayMs * 1000ULL;
+
+    prevFrameWasOpaque = !currentFrameHasTransparency;
 
     if (!skipFrame) {
       lastPosted = decodeBuffer;
@@ -129,14 +145,14 @@ int32_t GifRenderer::readFile(GIFFILE *pFile, uint8_t *pBuf, int32_t iLen) {
   File *f = static_cast<File *>(pFile->fHandle);
 
   if ((pFile->iSize - pFile->iPos) < iLen) {
-    iBytesRead = pFile->iSize - pFile->iPos - 1;
+    iBytesRead = pFile->iSize - pFile->iPos;
   }
   if (iBytesRead <= 0) {
     return 0;
   }
 
   iBytesRead = (int32_t)f->read(pBuf, iBytesRead);
-  pFile->iPos = f->position();
+  pFile->iPos += iBytesRead;
   return iBytesRead;
 }
 
@@ -199,45 +215,14 @@ void GifRenderer::drawTransparentLine(
   uint8_t *src = pixels;
   uint8_t *srcEnd = src + iWidth;
   uint8_t transparentIndex = pDraw->ucTransparent;
-  uint16_t pixelCache[DISPLAY_WIDTH];
-
   int x = 0;
-  int runLength = 0;
 
-  while (x < iWidth) {
-    uint8_t colorIndex = transparentIndex - 1;
-    uint16_t *cachePtr = pixelCache;
-
-    while (colorIndex != transparentIndex && src < srcEnd) {
-      colorIndex = *src++;
-      if (colorIndex == transparentIndex) {
-        src--;
-      } else {
-        *cachePtr = palette[colorIndex];
-        cachePtr++;
-        runLength++;
-      }
+  while (src < srcEnd) {
+    uint8_t colorIndex = *src++;
+    if (colorIndex != transparentIndex) {
+      lineBase[x] = palette[colorIndex];
     }
-
-    if (runLength > 0) {
-      int i = 0;
-      while (i < runLength) {
-        lineBase[x + i] = pixelCache[i];
-        i++;
-      }
-      x += runLength;
-      runLength = 0;
-    }
-
-    colorIndex = transparentIndex;
-    while (colorIndex == transparentIndex && src < srcEnd) {
-      colorIndex = *src++;
-      if (colorIndex == transparentIndex) {
-        x++;
-      } else {
-        src--;
-      }
-    }
+    x++;
   }
 }
 
@@ -247,15 +232,12 @@ void GifRenderer::drawOpaqueLine(
   uint16_t *lineBase,
   uint16_t *palette
 ) {
-  uint8_t  *src = pixels;
-  uint16_t *dst = lineBase;
-  int x = 0;
+  const uint8_t *src = pixels;
+  const uint8_t *end = pixels + iWidth;
+  uint16_t      *dst = lineBase;
 
-  while (x < iWidth) {
-    *dst = palette[*src];
-    dst++;
-    src++;
-    x++;
+  while (src < end) {
+    *dst++ = palette[*src++];
   }
 }
 
@@ -286,6 +268,7 @@ void GifRenderer::draw(GIFDRAW *pDraw) {
   applyDisposalIfNeeded(pDraw, pixels, iWidth);
 
   if (pDraw->ucHasTransparency) {
+    currentFrameHasTransparency = true;
     drawTransparentLine(pDraw, pixels, iWidth, lineBase, palette);
   } else {
     drawOpaqueLine(pixels, iWidth, lineBase, palette);
@@ -311,7 +294,7 @@ void GifRenderer::displayWriterTask() {
     }
     tft->startWrite();
     tft->setAddrWindow(0, 0, DISPLAY_WIDTH, DISPLAY_HEIGHT);
-    tft->writePixels(frameBuffer[bufIdx], FRAMEBUFFER_SIZE, false, false);
+    tft->writePixels(frameBuffer[bufIdx], FRAMEBUFFER_SIZE, false, true);
     tft->endWrite();
     xSemaphoreGive(bufferFree[bufIdx]);
   }

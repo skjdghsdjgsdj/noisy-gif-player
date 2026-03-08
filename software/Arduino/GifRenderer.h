@@ -35,7 +35,9 @@ private:
   File gifFile;
   uint16_t          frameBuffer[2][FRAMEBUFFER_SIZE];
   int               decodeBuffer;
-  bool              skipFrame;   // set before gif.playFrame(); read in flushFrameIfLastLine()
+  bool              skipFrame;               // set before gif.playFrame(); read in flushFrameIfLastLine()
+  bool              prevFrameWasOpaque;      // true if the last decoded frame had no transparent pixels
+  bool              currentFrameHasTransparency; // reset each frame; set by draw() if any scanline is transparent
   QueueHandle_t     displayQueue;
   SemaphoreHandle_t bufferFree[2];
   TaskHandle_t      displayWriterHandle;
