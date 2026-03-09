@@ -109,10 +109,6 @@ void Application::setupStorage() {
   SDCard::instance().begin();
 }
 
-void Application::seedRandom() {
-  randomSeed(esp_random());
-}
-
 void Application::setupSubsystems() {
   GifRenderer::instance().begin(tft);
   (void)PreferenceManager::instance();
@@ -125,7 +121,6 @@ void Application::setup() {
   setupPinsAndPower();
   setupDisplay();
   setupStorage();
-  seedRandom();
   setupSubsystems();
 
   if (digitalRead(USB_MSC_BUTTON_PIN) == HIGH) {

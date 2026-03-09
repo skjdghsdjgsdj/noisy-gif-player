@@ -11,7 +11,8 @@ public:
   }
 
   String loadLastGifPath();
-  void storeLastGifPath(const String &gifPath);
+  bool   storeLastGifPath(const String &gifPath);
+  void   clearLastGifPath();
 
   void loadCandidateList(std::vector<String> &out);
   void storeCandidateList(const std::vector<String> &list);

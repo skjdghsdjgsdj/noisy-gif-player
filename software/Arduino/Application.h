@@ -14,7 +14,6 @@ private:
   void setupPinsAndPower();
   void setupDisplay();
   void setupStorage();
-  void seedRandom();
   void setupSubsystems();
 
   void fadeBacklightOff();

@@ -143,7 +143,12 @@ bool GifSelector::chooseRandomGifAndWav(String &gifPath, String &wavPath) {
   wavPath = buildWavPathFromGif(gifPath);
 
   if (gifPath != lastGifPath) {
-    prefsManager.storeLastGifPath(gifPath);
+    if (!prefsManager.storeLastGifPath(gifPath)) {
+      // Write failed: remove the stale key so the next boot starts fresh
+      // rather than de-duplicating against a path that may not reflect
+      // what actually played.
+      prefsManager.clearLastGifPath();
+    }
   }
 
   return true;

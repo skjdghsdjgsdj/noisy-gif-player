@@ -12,8 +12,12 @@ String PreferenceManager::loadLastGifPath() {
   return prefs.getString(PREF_LAST_GIFKEY, "");
 }
 
-void PreferenceManager::storeLastGifPath(const String &gifPath) {
-  prefs.putString(PREF_LAST_GIFKEY, gifPath);
+bool PreferenceManager::storeLastGifPath(const String &gifPath) {
+  return prefs.putString(PREF_LAST_GIFKEY, gifPath) > 0;
+}
+
+void PreferenceManager::clearLastGifPath() {
+  prefs.remove(PREF_LAST_GIFKEY);
 }
 
 void PreferenceManager::loadCandidateList(std::vector<String> &out) {
