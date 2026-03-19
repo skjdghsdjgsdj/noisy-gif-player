@@ -61,7 +61,7 @@ If your printer doesn't bridge well, also add supports to the USB C hole in `Cas
 
 The repository includes a script called `convert.sh` that runs FFmpeg with very specific arguments to make GIFs and WAVs compatible with the board.
 
-> ![IMPORTANT]
+> [!IMPORTANT]
 > At least one GIF must be loaded onto the SD card for the project to function. Each GIF must follow a very specific format. A random GIF you find on the internet is unlikely to work. Here's how to make a compatible GIF and WAV.
 
 First, prepare your environment. This only needs to be done once:
