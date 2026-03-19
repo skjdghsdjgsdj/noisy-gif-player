@@ -31,7 +31,7 @@ void SDCard::begin() {
     SD_DATA_PINS[3]
   );
 
-  SD_MMC.begin(SD_MOUNT_POINT, true, true, SD_FREQ_KHZ);
+  SD_MMC.begin(SD_MOUNT_POINT, false, true, SD_FREQ_KHZ);
 }
 
 void SDCard::end() {

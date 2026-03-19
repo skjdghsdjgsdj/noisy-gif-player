@@ -2,12 +2,16 @@
 #include <USB.h>
 #include "SDCard.h"
 #include "GifRenderer.h"
+#include "PreferenceManager.h"
 
 USBMassStorageMode::USBMassStorageMode()
   : msc() {
 }
 
 void USBMassStorageMode::run(Adafruit_ST7789 &tft) {
+  // SD contents may change while in MSC mode; invalidate the cached GIF list
+  // so the next boot re-enumerates rather than playing from a stale cache.
+  PreferenceManager::instance().clearCandidateList();
   showScreen(tft);
   configureMSC();
   USB.begin();
@@ -50,8 +54,8 @@ void USBMassStorageMode::showScreen(Adafruit_ST7789 &tft) {
 }
 
 void USBMassStorageMode::configureMSC() {
-  msc.vendorID("Adafruit");
-  msc.productID("ESP32-S3 SD");
+  msc.vendorID("ESP32");
+  msc.productID("USB_MSC");
   msc.productRevision("1.0");
 
   msc.onRead(onReadThunk);
@@ -73,9 +77,6 @@ int32_t USBMassStorageMode::onWriteThunk(uint32_t lba, uint32_t offset, uint8_t 
 }
 
 bool USBMassStorageMode::onStartStopThunk(uint8_t power_condition, bool start, bool load_eject) {
-  (void)power_condition;
-  (void)start;
-  (void)load_eject;
   return true;
 }
 

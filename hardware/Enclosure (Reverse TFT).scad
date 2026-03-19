@@ -77,7 +77,7 @@ module male_header(pin_count, pitch = 2.54) {
 }
 
 // Feather specs: https://learn.adafruit.com/adafruit-feather/feather-specification
-color("#99ccff") {
+%color("#99ccff") {
 	translate([6.35, 0.05 * 25.4, PCB_height])
 	female_header(16);
 
@@ -87,7 +87,7 @@ color("#99ccff") {
 	import("lib/5691 ESP32 S3 Reverse TFT Feather.stl");
 }
 
-translate([8.9, -1.3, Female_header_base_height + Male_header_base_height + PCB_height])
+%translate([8.9, -1.3, Female_header_base_height + Male_header_base_height + PCB_height])
 rotate([0, 0, 0])
 color("#ff99ff") {
 	translate([2.5, 2.55, -Male_header_total_height + Pin_projection - 0.2])
@@ -96,7 +96,7 @@ color("#ff99ff") {
 	import("lib/4682 Micro SD Breakout.stl");
 }
 
-translate([35.5, -1.3, PCB_height + Female_header_base_height])
+%translate([35.5, -1.3, PCB_height + Female_header_base_height])
 color("#ffffaa") {
 	translate([0, 0, Male_header_base_height])
 	import("lib/3006 MAX98357.stl");
@@ -104,14 +104,14 @@ color("#ffffaa") {
 	male_header(3);
 }
 
-translate([24.5, 5, 4.5]) {
+%translate([24.5, 5, 4.5]) {
 	cube([31, 17, 7.5]);
 	
 	translate([-5.6, 0, 7.5 - 4.2])
 	cube([5.6, 17, 4.2]);
 }
 
-translate([25, 28, 9])
+%translate([25, 28, 9])
 rotate([90, 90, 0])
 color("#99ffaa") import("lib/3923 Mini Oval Speaker.stl");
 

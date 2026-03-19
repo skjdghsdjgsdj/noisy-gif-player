@@ -4,6 +4,9 @@
 #include <Adafruit_ST7789.h>
 #include <AnimatedGIF.h>
 #include <FS.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <freertos/semphr.h>
 
 class GifRenderer {
 public:
@@ -30,7 +33,24 @@ private:
   Adafruit_ST7789 *tft;
   AnimatedGIF gif;
   File gifFile;
-  uint16_t frameBuffer[FRAMEBUFFER_SIZE];
+  uint16_t          frameBuffer[2][FRAMEBUFFER_SIZE];
+  int               decodeBuffer;
+  bool              skipFrame;               // set before gif.playFrame(); read in flushFrameIfLastLine()
+  bool              prevFrameWasOpaque;      // true if the last decoded frame had no transparent pixels
+  bool              currentFrameHasTransparency; // reset each frame; set by draw() if any scanline is transparent
+  // Passed through displayQueue so the DisplayWriter knows which framebuffer
+  // rows were actually modified. Sending only the dirty rows reduces SPI
+  // transfer time proportionally when the GIF frame covers less than the full
+  // canvas height (which is typical with diff_mode=rectangle encoding).
+  struct DisplayFrame {
+    int bufIdx;
+    int topRow;
+    int numRows;
+  };
+
+  QueueHandle_t     displayQueue;
+  SemaphoreHandle_t bufferFree[2];
+  TaskHandle_t      displayWriterHandle;
 
   void clearFrameBuffer();
 
@@ -39,6 +59,12 @@ private:
   void drawTransparentLine(GIFDRAW *pDraw, uint8_t *pixels, int iWidth, uint16_t *lineBase, uint16_t *palette);
   void drawOpaqueLine(uint8_t *pixels, int iWidth, uint16_t *lineBase, uint16_t *palette);
   void flushFrameIfLastLine(GIFDRAW *pDraw);
+
+  static void displayWriterTaskEntry(void *param);
+  void        displayWriterTask();
+  void        startDisplayWriterTask();
+  void        stopDisplayWriterTask();
+  void        waitForLastFrame(int lastPosted);
 };
 
 // Free-function callbacks for AnimatedGIF

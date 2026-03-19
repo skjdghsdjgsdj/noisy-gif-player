@@ -15,11 +15,12 @@ You need:
 * Some soldering experience
 * A 3D printer
 * A computer:
-  * Running macOS or Linux<sup>*</sup>
+  * Running macOS or Linux
   * With a microSD card reader
   * With FFmpeg installed
 
-<sup>*</sup> This is because the script that creates compatible GIFs/WAVs is written in Bash. On Windows, you'll need to port it to PowerShell, like `convert.ps1`. PRs welcome!
+> [!NOTE]
+> Linux/macOS is needed because the script that creates compatible GIFs/WAVs is written in Bash. On Windows, you'll need to port it to PowerShell, like `convert.ps1`. PRs welcome!
 
 ### Step 1: Buy parts
 
@@ -33,6 +34,7 @@ You need these parts:
 | [Mini oval speaker](https://www.adafruit.com/product/3923)                     | An itty bitty speaker                  | $1.95       |
 | [Female headers for Feathers](https://www.adafruit.com/product/2886)           | Physical assembly                      | $0.95       |
 | [400mAH battery for Feathers](https://www.adafruit.com/product/3898)           | The battery                            | $6.95       |
+| **Total**                                                                      |                                        | **$44.25**  |
 
 You'll need these supplies:
 
@@ -59,7 +61,8 @@ If your printer doesn't bridge well, also add supports to the USB C hole in `Cas
 
 The repository includes a script called `convert.sh` that runs FFmpeg with very specific arguments to make GIFs and WAVs compatible with the board.
 
-At least one GIF must be loaded onto the SD card for the project to function. The GIF follows a very specific format. A random GIF you find on the internet is unlikely to work. Here's how to make a compatible GIF and WAV.
+> [!IMPORTANT]
+> At least one GIF must be loaded onto the SD card for the project to function. Each GIF must follow a very specific format. A random GIF you find on the internet is unlikely to work. Here's how to make a compatible GIF and WAV.
 
 First, prepare your environment. This only needs to be done once:
 
@@ -71,7 +74,7 @@ Now, convert a video into a compatible GIF and WAV format:
 
 1. Download a video to your computer that you want to load. Pick a video that's only a few seconds long because longer ones might drift out of audio sync. Let's assume it's called `test.mp4` and you stored it in the same directory as this project.
 2. Open a terminal and `cd` to the project's directory.
-3. Run `./convert.sh test.mp4`. This outputs `test.gif` and the `software/server` directory and test.wav in the same directory.
+3. Run `./convert.sh test.mp4`. This outputs `test.gif` and the `test.wav` in the same directory.
 4. Copy `test.gif` to `gifs/` and `test.wav` to `wavs/`.
 
 The resulting SD card structure should look like:
@@ -86,7 +89,8 @@ SD card root
 
 ### Step 4: Physical assembly
 
-Read these instructions fully before actually starting! Everything is a very tight fit in the enclosure and the details matter.
+> [!IMPORTANT]
+> Read these instructions fully before actually starting! Everything is a very tight fit in the enclosure and the details matter.
 
 Here's a logical diagram of how the components are connected, for reference. In particular, note the following:
 
@@ -163,7 +167,8 @@ The male headers that come with the boards may not match the number of pins. You
 4. Using a paperclip, press and hold D0 (top-left pinhole on the board when viewed with the USB port on the left). While holding D0, press the Reset button, then release D0.
 5. Connect to the board in the Arduino IDE.
 6. Select **Tools** → **Partition Scheme** and "Huge APP (3MB No OTA/1MB SPIFFS)" or a similar entry. This prevents a bootloader screen from appearing if you press the Reset button twice with a specific timing.
-7. Compile and upload the sketch.
+7. Select **Tools** → **USB CDC on Boot** and set it to "Disabled." If you don't do this, the USB loading method of files to the SD card may not work.
+8. Compile and upload the sketch.
 
 Press the Reset button. Your GIF and WAV should play! Once the GIF is done, the screen fades off and the board sleeps. Pressing the Reset button wakes it back up and a GIF/WAV play again.
 
@@ -175,7 +180,7 @@ The battery should last a long time, but it's not a good idea to let it discharg
 
 ### Loading more GIFs
 
-There are two ways to load a GIF and WAV.
+There are two ways to load GIFs and WAVs.
 
 The fastest way for a lot of GIFs and WAVs is directly via the SD card. Consider this option when you first build the project. Once you've built the project, it can be a pain to take it apart to get the SD card out.
 
@@ -189,29 +194,31 @@ This reboots the board into USB mass storage mode with a message appearing on th
 
 All the GIFs and WAVs you load must be created using the `convert.sh` script! Don't use GIFs or WAVs you find on the internet because they will not likely be compatible with these specs. Always process all your files through `convert.sh`, even if the source itself is a GIF, to be sure it's compatible with the project.
 
-If you want a web interface for the MP4 to GIF/WAV conversion, you'll need a Python installation. These instructions assume you have some Python knowledge.
+The conversion script can also be invoked with a friendly web interface. If you want to run that, you'll need a Python installation. These instructions assume you have some Python knowledge.
 
 1. Open a terminal and `cd` to the project's `software/server` directory.
 2. Set up a Python virtual environment with `python3 -m venv venv` then activate it with `source venv/bin/activate`.
 3. Install the necessary libraries with `pip3 install -r requirements.txt`.
 4. Run the server: for testing's sake, use `python3 app.py`, or for "production" use (well, just not your own computer), run `chmod +x start.sh` to make the startup script executable, then launch it with `./start.sh`.
+5. Open a browser to `http://localhost:5000/`.
 
 ### About GIF creation
 
-The WAV for a GIF is optional, so if your source file has no sound, or you just don't want sound, delete the resulting `.wav` file.
+> [!TIP]
+> The WAV for a GIF is optional, so if your source file has no sound, or you just don't want sound, delete the resulting `.wav` file.
 
 `convert.sh` does several things:
 
-* Forces the FPS to 15 by default
+* Forces the framerate to 30 fps
 * Forces the resolution to exactly 240x135, which is the native resolution of the screen. GIFs are letterboxed or pillarboxed as necessary to keep the aspect ratio and to match this resolution.
 * Forces a specific color palette
 * Outputs a WAV file at 16 KHz mono
+
+You can pass `--start` and/or `--end` arguments to the conversion script with timecodes to crop a video to a certain timespan if you don't want to convert the entire thing.
 
 ## Known issues
 
 * **The OpenSCAD code is terrible and a lot of the math is wrong if you adjust some settings, like surface thickness.** Sure is. I needed to build this quickly so I hardcoded a _lot_ of things. I welcome any attempts to clean up or just completely redo the enclosure code.
 * **Some of the Arduino code is also terrible.** Because it is largely and shamefully AI generated for the same reason of time constraints, plus C++ not being my speciality. At least it works.
 * **The USB transfer speed is super slow.** That's a limitation of the board. I don't think there's any way to make it faster. If you want to transfer a lot of data, take out the SD card and put it in a card reader.
-* **If I load a lot of GIFs, some don't show up in rotation.** The code artificially limits the list of GIFs to 64, but you can increase this.
 * **There's no low battery warning.** Yes I should add that. There's an onboard I2C battery monitor that should work for this purpose; I just haven't programmed that in yet.
-* **Audio drifts out of sync with longer GIFs.** Probably, yeah. There's no code to sync the two and instead the code relies on the GIF playing back smoothly and assumes the audio does the same.
