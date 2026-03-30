@@ -104,6 +104,12 @@ Here's a logical diagram of how the components are connected, for reference. In 
 
 The male headers that come with the boards may not match the number of pins. You can twist apart the male headers at the perforations to get the right number of pins.
 
+Some assembly tips:
+
+* A magnetized screwdriver will help a lot. It's tricky to align the screws when everything is shoved in the case otherwise.
+* For the doubled-up `GND` pin: try sandwiching the ground wire between the female header on the Feather and the Feather itself. That is, for the female header, the `GND` pin hole will have both the female header's pin and the ground wire going through it, then soldered in one bit. The female header might be a bit out of level, but as long as all the pins are making good contact once soldered, it should still fit.
+* When viewing the case from above with the screen facing down and the USB port hole to the left, and therefore the speaker hole on the top, offset the speaker a bit to the right (i.e., away from the USB C hole). If you try to perfectly center it, you may find that the battery plug gets in the way of fitting everything into the case.
+
 1. Solder headers to various boards. Be sure you get the pins right! You will not use all the headers!
    1. Solder the 16-pin female header to the Feather's row of 16 pins (`RST` through `DB`). **Do not solder the 12-pin female header.** The female portion of the header is on the opposite of the board as the LCD, like this:
    
