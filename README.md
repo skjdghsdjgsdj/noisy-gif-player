@@ -72,7 +72,7 @@ First, prepare your environment. This only needs to be done once:
 
 Now, convert a video into a compatible GIF and WAV format:
 
-1. Download a video to your computer that you want to load. Pick a video that's only a few seconds long because longer ones might drift out of audio sync. Let's assume it's called `test.mp4` and you stored it in the same directory as this project.
+1. Download a video to your computer that you want to load. Let's assume it's called `test.mp4` and you stored it in the same directory as this project.
 2. Open a terminal and `cd` to the project's directory.
 3. Run `./convert.sh test.mp4`. This outputs `test.gif` and the `test.wav` in the same directory.
 4. Copy `test.gif` to `gifs/` and `test.wav` to `wavs/`.
@@ -94,11 +94,12 @@ SD card root
 
 Here's a logical diagram of how the components are connected, for reference. In particular, note the following:
 
-* The Feather's `GND` pin is shared, but two separate `3V` pins are used
-* The I2S amplifier aligns to `MI` through `TX`; the _first_ 3V pin gets wired to the I2S amplifier's power pin
+* The Feather's `GND` pin is shared. Two separate `3V` pins are used, so only the `GND` pin is doubled up.
+* The I2S amplifier aligns to `MI` through `TX`; the _first_ 3V pin gets wired to the I2S amplifier's power pin.
 * The SD breakout aligns to the _second_ 3V pin, the GND pin, and various GPIO pins up through `SCK`; all the SD breakout's connections are through headers, not wires
-* `RST`, `MO`, and `DB` are unused on the row of 16 pins
-* None of the pins on the row of 12 pins are used
+* `RST`, `MO`, and `DB` are unused on the row of 16 pins.
+* None of the pins on the row of 12 pins are used.
+* The speaker and battery aren't shown. The battery just plugs into the Feather. The speaker gets its red wire soldered--not screwed--to the I2S amplifier's `+` pin and black goes to `-`.
 
 ![Fritzing diagram](docs/img/fritzing.png)
 
@@ -119,11 +120,11 @@ Some assembly tips:
    
       ![SD card breakout with male headers](docs/img/sd.png)
 
-   3. Solder a male header **with only three** pins to the I2S amplifier breakout. Solder the `LRC`, `BCLK`, and `DIN` pins like this. Note that in this picture, the screw terminals if included with your board aren't shown, but would be on the top with the headers facing down. The components are also on the top.
+   3. Solder a male header **with only three** pins to the I2S amplifier breakout: just the `LRC`, `BCLK`, and `DIN` pins like this. Note that in this picture, the screw terminals if included with your board aren't shown, but would be on the top with the headers facing down. The components are also on the top.
 
       ![I2S amplifier with male headers](docs/img/i2s.png)
 
-2. If your I2S amplifier came with presoldered screw terminals, you'll need to remove them because they take up too much space. Gently twist and rock them back and forth a whole bunch until you can work them free, or if you're able, desolder the pins. Be careful and take your time.
+2. If your I2S amplifier came with presoldered screw terminals, you'll need to remove them because they take up too much space. Gently twist and rock them back and forth a whole bunch until you can work them free, or if you're able, desolder the pins. It might also help to use wire cutters to snip off as much as the pins as possible. Be careful and take your time.
 
 3. Now you'll connect the speaker to the I2S amplifier.
 
